@@ -22,7 +22,7 @@ function varargout = ViewCellTracks(varargin)
 
 % Edit the above text to modify the response to help ViewCellTracks
 
-% Last Modified by GUIDE v2.5 23-Jan-2018 13:51:12
+% Last Modified by GUIDE v2.5 25-Jan-2018 14:51:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -82,27 +82,30 @@ function slider1_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
-
+% TODO: unless clear is pressed, keep the plotted data
+handles.clicked = 0;
 handles.currT = int32(get(handles.slider1, 'Value'));
-% axes(handles.axes1);hold off
+%axes(handles.axes1);hold off
 UpdateImage(handles,handles.currT);
 xyt_curr = handles.fulltrack ;
 colormap = handles.colormap;
 handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
 if  handles.currT<=size(xyt_curr,1)% not all cells are tracked all the way
 hplot2 = plot(xyt_curr(handles.currT,1),xyt_curr(handles.currT,2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);
-title(['Current time point  ' num2str(xyt_curr(handles.currT,3)*handles.delta_t/60)   'hrs since start; Frame(' num2str(xyt_curr(handles.currT,3)) ')']);
+    ,'p','MarkerFaceColor',colormap(handles.trackcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+title(['Current time point  ' num2str(xyt_curr(handles.currT,3)*handles.delta_t/60)   'hrs since start; Frame(' num2str(xyt_curr(handles.currT,3)) ')']);hold on
 handles.residualdat = hplot2;
+handles.residualcolor = handles.trackcolor;
 else % if the slider is pressed, and the track lost, only the image will be shown
 title(['This Track ID was lost. Current Frame(' num2str(handles.currT) ')'],'Color','r');
 handles.residualdat = [];
+handles.residualcolor = [1 0 0];
 end
-if isfinite(handles.tracktoplot)
-%get rid of the plot of the older track
-delete(handles.oldlabel);
-end
-%handles.residualdat.Visible = 'off';
+% if isfinite(handles.tracktoplot)
+% %get rid of the plot of the older track
+% delete(handles.oldlabel);
+% end
+%disp(handles.clicked)
 guidata(hObject, handles);
 
 
@@ -116,6 +119,7 @@ function slider1_CreateFcn(hObject, eventdata, handles)
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
+handles.ShowFullTrack.Visible = 'On';
 
 function ReadTrackID_Callback(hObject, eventdata, handles)
 % hObject    handle to ReadTrackID (see GCBO)
@@ -124,19 +128,37 @@ function ReadTrackID_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of ReadTrackID as text
 %        str2double(get(hObject,'String')) returns contents of ReadTrackID as a double
-handles.PlotTrackID.Visible = 'On';
 handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+
+if handles.tracktoplot <= handles.total_tracks && handles.tracktoplot>0
+handles.clicked = 1;    
+handles.PlotTrackID.Visible = 'On';
+handles.ShowFullTrack.Visible = 'On';
+handles.fulltrack = handles.tracks(handles.tracktoplot).dat;
+colormap = prism;
+randcolor = randi(size(colormap,1));% select the track label color once
+handles.trackcolor = randcolor;
+handles.colormap = prism;  
+% handles.residualdat = handles.tracks(handles.tracktoplot).dat(1,1:2);% first time point
+% handles.residualcolor = handles.trackcolor;
+%disp(handles.residualdat)
+end
+
 if handles.tracktoplot > handles.total_tracks
     disp(['There are ' num2str(handles.total_tracks) ' tracks in this image']);
     handles.PlotTrackID.Visible = 'Off';
     return
 end
+
 if handles.tracktoplot == 0
     disp('Track ID must be greater than 0');
     handles.PlotTrackID.Visible = 'Off';
     return
 end
+%disp(handles.clicked)
 guidata(hObject, handles);
+
+
 % --- Executes during object creation, after setting all properties.
 function ReadTrackID_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to ReadTrackID (see GCBO)
@@ -150,28 +172,29 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
+
 % --- Executes on button press in PlotTrackID.
 function PlotTrackID_Callback(hObject, eventdata, handles)
 % hObject    handle to PlotTrackID (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% TODO: here try to clear hobject or handles, since after couple tracks,
-% gui gets very slow
-colormap = prism;
-randcolor = randi(size(colormap,1));% select the track label color once
+%disp(handles.clicked)
 xyt = handles.tracks;
-handles.trackcolor = randcolor;
-handles.colormap = prism;
-
+colormap = handles.colormap;
 if handles.tracktoplot > 0 
 firstT = xyt(handles.tracktoplot).dat(1,3);
 handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
 handles.fulltrack = xyt(handles.tracktoplot).dat;
-axes(handles.axes1); hold on
+%
 % anytime a new track id is chosen, set the slider to initial time point
 set(handles.slider1, 'Value', 1); 
-UpdateImage(handles,firstT);
-
+UpdateImage(handles,firstT);hold on
+%if handles.clicked == 1
+%plot(handles.residualdat(1),handles.residualdat(2),'p','MarkerFaceColor',colormap(handles.residualcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+%end
+%if handles.clicked == 0
+%plot(handles.residualdat.XData,handles.residualdat.YData,'p','MarkerFaceColor',colormap(handles.residualcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+%end
 if ~isempty(xyt(handles.tracktoplot).dat)
 hdata  = plot(xyt(handles.tracktoplot).dat(firstT,1),xyt(handles.tracktoplot).dat(firstT,2)...
     ,'p','MarkerFaceColor',colormap(handles.trackcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
@@ -254,7 +277,7 @@ multi_img(:,:,jj) = (proj{1}{jj});
 end
 
 function UpdateImage(handles,time)
-imshow(handles.allprojections(:,:,time),[0 3500],'Parent',handles.axes1);
+imshow(handles.allprojections(:,:,time),[0 3500],'Parent',handles.axes1);hold on
 
 
 function [coordintime] = extracktIlastikTracks(handles)
@@ -292,6 +315,8 @@ function ClearButton_Callback(hObject, eventdata, handles)
 % hObject    handle to ClearButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+handles.PlotTrackID.Visible = 'Off';
+handles.ShowFullTrack.Visible = 'Off';
 axes(handles.axes1);hold off
 cla reset;
 handles.axes1.YTickLabel=[];
@@ -300,6 +325,9 @@ box on
 delete(handles.axes1.Children)
 set(handles.slider1, 'Value', 1); 
 set(handles.ReadTrackID,'String','Track ID');
+UpdateImage(handles,1);% show first frame when clear button is pressed
+title(['Current time point  ' num2str(1*handles.delta_t/60)   'hrs since start; Frame(' num2str(1) ')']);hold on
+
 guidata(hObject, handles);
 
 
@@ -319,3 +347,56 @@ function TotalTracksStaticText_CreateFcn(hObject, eventdata, handles)
 % it back for analysis.
 % TODO: other channel input (image) or other segmented cells input(plot
 % other cell type), although this will only be relevant to sorting
+
+
+% --- Executes on button press in ShowFullTrack.
+function ShowFullTrack_Callback(hObject, eventdata, handles)
+% hObject    handle to ShowFullTrack (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+
+if handles.tracktoplot > handles.total_tracks
+    disp(['There are ' num2str(handles.total_tracks) ' tracks in this image']);
+    handles.PlotTrackID.Visible = 'Off';
+    return
+else
+   handles.fulltrack = handles.tracks(handles.tracktoplot).dat; 
+end
+
+if handles.tracktoplot == 0
+    disp('Track ID must be greater than 0');
+    handles.PlotTrackID.Visible = 'Off';
+    return
+    else
+   handles.fulltrack = handles.tracks(handles.tracktoplot).dat; 
+
+
+handles.currT = int32(get(handles.slider1, 'Value'));
+UpdateImage(handles,handles.currT);
+xyt_curr = handles.fulltrack ;
+colormap = handles.colormap;
+handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+if  ~isempty(handles.currT)% 
+hplot2 = plot(xyt_curr(2:end-1,1),xyt_curr(2:end-1,2)...
+    ,'p','MarkerFaceColor',colormap(handles.trackcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+title(['Current time point  ' num2str(xyt_curr(handles.currT,3)*handles.delta_t/60)   'hrs since start; Frame(' num2str(xyt_curr(handles.currT,3)) ')']);hold on
+plot(xyt_curr(1,1),xyt_curr(1,2)...
+    ,'d','MarkerFaceColor','r','MarkerEdgeColor','y','MarkerSize',5,'LineWidth',1);hold on
+text(xyt_curr(1,1)+8,xyt_curr(1,2)+5,'Start','Color','r','FontSize',8);hold on
+plot(xyt_curr(end,1),xyt_curr(end,2)...
+    ,'d','MarkerFaceColor','g','MarkerEdgeColor','k','MarkerSize',5,'LineWidth',1);hold on
+text(xyt_curr(end,1)+8,xyt_curr(end,2)+5,'End','Color','g','FontSize',8);hold on
+handles.residualdat = hplot2;
+else % if the slider is pressed, and the track lost, only the image will be shown
+title(['This Track ID was lost. Current Frame(' num2str(handles.currT) ')'],'Color','r');
+handles.residualdat = [];
+end
+end
+% if isfinite(handles.tracktoplot)
+% %get rid of the plot of the older track
+% delete(handles.oldlabel);
+% end
+guidata(hObject, handles);
+
