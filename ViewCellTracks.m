@@ -412,9 +412,14 @@ function SaveTrackIDs_Callback(hObject, eventdata, handles)
 % hObject    handle to SaveTrackIDs (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+platf = ispc;% see if PC or MAC to use the '/' correctly for the save path
 goodtracks = handles.validtrack;
-fname = [num2str(handles.dir) '\ValidTrackIDs_position' num2str(handles.pos) '_chan_' num2str(handles.chan) '.mat' ];
-save(fname,'goodtracks');
+if platf == 1
+    fname = [num2str(handles.dir) '\ValidTrackIDs_position' num2str(handles.pos) '_chan_' num2str(handles.chan) '.mat' ];
+else
+    fname = [num2str(handles.dir) '/ValidTrackIDs_position' num2str(handles.pos) '_chan_' num2str(handles.chan) '.mat' ];
+end
+    save(fname,'goodtracks');
 disp('Saved valid trackIDs to file');
 guidata(hObject, handles);
 
