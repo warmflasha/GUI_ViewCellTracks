@@ -95,11 +95,18 @@ handles.fulltrack = xyt_curr;
 colormap = handles.colormap;
 %handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
 for k =1:toview
-if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
-hplot2 = plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
-text(xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
-    num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:));hold on
+ firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
+    if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
+        if xyt_curr(k).fulltrack(handles.currT,1)>0 % tracks that were assigned after first time point, have zeros in the beginning so don't plot them
+            
+            hplot2 = plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2)...
+                ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+            text(xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
+                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:));hold on
+        else
+            disp(['Track ID ' num2str(handles.tracktoplot(k)) 'was picked up in frame' num2str(firstT(k))]);
+        end
+
 end
 end
 title(['Current time point  ' num2str((handles.currT*handles.delta_t)/60)  ...
@@ -180,7 +187,7 @@ function PlotTrackID_Callback(hObject, eventdata, handles)
 xyt = handles.tracks;
 colormap = handles.colormap;
 if handles.tracktoplot(handles.counter) > 0 
-firstT = xyt(handles.tracktoplot(handles.counter)).dat(1,3);
+firstT = min(nonzeros(xyt(handles.tracktoplot(handles.counter)).dat(:,3)));%xyt(handles.tracktoplot(handles.counter)).dat(1,3)
 % handles.tracktoplot(handles.counter) = str2double(get(handles.ReadTrackID, 'String'));
 % anytime a new track id is chosen, set the slider to initial time point
 set(handles.slider1, 'Value', 1); 
@@ -188,7 +195,7 @@ set(handles.slider1, 'Value', 1);
 if ~isempty(xyt(handles.tracktoplot(handles.counter)).dat)
 hdata  = plot(xyt(handles.tracktoplot(handles.counter)).dat(firstT,1),xyt(handles.tracktoplot(handles.counter)).dat(firstT,2)...
     ,'p','MarkerFaceColor',colormap(handles.trackcolor(handles.counter),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
-title(['Current time point:  ' num2str(xyt(handles.tracktoplot(handles.counter)).dat(firstT,3)*handles.delta_t/60)   'hrs since start']);
+title(['The track starts at :  ' num2str(xyt(handles.tracktoplot(handles.counter)).dat(firstT,3)*handles.delta_t/60)   'hrs since start; Frame' num2str(firstT)]);
 handles.oldlabel = hdata;
 else
     disp('Choose another trackID, this track is empty')
@@ -349,25 +356,26 @@ for jj=1:toview
    xyt_curr(jj).fulltrack = xyt(handles.tracktoplot(jj)).dat;  
 end
 handles.fulltrack = xyt_curr; 
-
 handles.currT = int32(get(handles.slider1, 'Value'));
-UpdateImage(handles,handles.currT);hold on
+UpdateImage(handles,1);hold on
 colormap = handles.colormap;
 %handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
 for k=1:toview
+ firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
 if  ~isempty(handles.currT)% 
-hplot2 = plot(xyt_curr(k).fulltrack(2:end-1,1),xyt_curr(k).fulltrack(2:end-1,2)...
+hplot2 = plot(xyt_curr(k).fulltrack(firstT(k)+1:end-1,1),xyt_curr(k).fulltrack(firstT(k)+1:end-1,2)...
     ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
-title(['Current time point  ' num2str(xyt_curr(k).fulltrack(handles.currT,3)*handles.delta_t/60)   'hrs since start; Frame(' num2str(xyt_curr(k).fulltrack(handles.currT,3)) ')']);hold on
-plot(xyt_curr(k).fulltrack(1,1),xyt_curr(k).fulltrack(1,2)...
+plot(xyt_curr(k).fulltrack(firstT(k),1),xyt_curr(k).fulltrack(firstT(k),2)...
     ,'d','MarkerFaceColor','r','MarkerEdgeColor','y','MarkerSize',5,'LineWidth',1);hold on
-text(xyt_curr(k).fulltrack(1,1)+8,xyt_curr(k).fulltrack(1,2)+5,'Start','Color','r','FontSize',8);hold on
+text(xyt_curr(k).fulltrack(firstT(k),1)+8,xyt_curr(k).fulltrack(firstT(k),2)+5,'Start','Color','r','FontSize',8);hold on
 plot(xyt_curr(k).fulltrack(end,1),xyt_curr(k).fulltrack(end,2)...
     ,'d','MarkerFaceColor','g','MarkerEdgeColor','k','MarkerSize',5,'LineWidth',1);hold on
 text(xyt_curr(k).fulltrack(end,1)+8,xyt_curr(k).fulltrack(end,2)+5,'End','Color','g','FontSize',8);hold on
 
 end
 end
+title('Frame 1, movie start shown');
+set(handles.slider1, 'Value', 1); 
 guidata(hObject, handles);
 
 
@@ -415,9 +423,9 @@ function SaveTrackIDs_Callback(hObject, eventdata, handles)
 platf = ispc;% see if PC or MAC to use the '/' correctly for the save path
 goodtracks = handles.validtrack;
 if platf == 1
-    fname = [num2str(handles.dir) '\ValidTrackIDs_position' num2str(handles.pos) '_chan_' num2str(handles.chan) '.mat' ];
+    fname = [num2str(handles.dir) '\ValidTrackIDs_position' num2str(handles.pos) '_chan_w000' num2str(handles.chan-1) '.mat' ];
 else
-    fname = [num2str(handles.dir) '/ValidTrackIDs_position' num2str(handles.pos) '_chan_' num2str(handles.chan) '.mat' ];
+    fname = [num2str(handles.dir) '/ValidTrackIDs_position' num2str(handles.pos) '_chan_w000' num2str(handles.chan-1) '.mat' ];
 end
     save(fname,'goodtracks');
 disp('Saved valid trackIDs to file');
@@ -426,7 +434,8 @@ guidata(hObject, handles);
 % TODO: sizing; try to rescale
 % TODO: look into lagging after looking at couple tracks...seems that a
 % little slower response
-% TODO: make sure the saving will work on both Mac and Windows ('/' vs'\');
+% TODO: try to intergrate with the signaling/fluorescence quantification
+% data
 % TODO: other channel input (image) or other segmented cells input(plot
 % other cell type), although this will only be relevant to sorting
 
