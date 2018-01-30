@@ -247,6 +247,7 @@ function loadtrackingdata_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.DisplayTotalTracksField,'String','N');
+handles.validtrackIDcount = 1;% initialize the validTrack counter
 tracks.Ilastikfile_TrackingData_h5 ={ {'uigetfile(''.'')'} };
 %tracks.trackedcelltype =0;
 tracks = StructDlg(tracks);
@@ -413,7 +414,6 @@ function ValidTrackIDtoSaveStatText_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to ValidTrackIDtoSaveStatText (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
-handles.validtrackIDcount = 1;
 
 % --- Executes on button press in SaveTrackIDs.
 function SaveTrackIDs_Callback(hObject, eventdata, handles)
@@ -429,6 +429,7 @@ else
 end
     save(fname,'goodtracks');
 disp('Saved valid trackIDs to file');
+handles.validtrackIDcount = 1;% reset the validTrack counter
 guidata(hObject, handles);
 
 % TODO: sizing; try to rescale
