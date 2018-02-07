@@ -249,10 +249,11 @@ function loadtrackingdata_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.DisplayTotalTracksField,'String','N');
 handles.validtrackIDcount = 1;% initialize the validTrack counter
-[tracks.Ilastikfile_TrackingData_h5, pathname] =uigetfile('*.h5','File Selector');%uigetfile('All Files (*.*)','File Selector');%{ {'uigetfile(''.'')'} }
+tracks.Ilastikfile_TrackingData_h5 ={ {'uigetfile(''*.h5'')'} };%{ {'uigetfile(''.'')'} }
 handles.ShowTrackIDsState = 1; % initialize the state of the counter of how many times the button was pressed
 tracks = StructDlg(tracks);
-handles.ilastikfile = fullfile(pathname,tracks.Ilastikfile_TrackingData_h5);
+handles.ilastikfile = tracks.Ilastikfile_TrackingData_h5;
+%handles.trackedcelltype= tracks.trackedcelltype ;
 [coordintime] = extracktIlastikTracks(handles);
 handles.tracks = coordintime;
 %handles.tracktoplot = [];
@@ -477,7 +478,7 @@ for jj=1:size(xyt,2)
  end
 hdata  = plot(allIDdata(:,1),allIDdata(:,2)...
     ,'*b','MarkerSize',3,'LineWidth',1);hold on
-text(allIDdata(:,1)+3*ones(size(allIDdata(:,1))),allIDdata(:,2)+5*ones(size(allIDdata(:,1))),num2str(allIDdata(:,3)),'FontSize',7,'Color','y');
+text(allIDdata(:,1)+5*ones(size(allIDdata(:,1))),allIDdata(:,2)+5*ones(size(allIDdata(:,1))),num2str(allIDdata(:,3)),'FontSize',7,'Color','y');
 end
 guidata(hObject, handles);
 
