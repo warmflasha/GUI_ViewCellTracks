@@ -22,7 +22,7 @@ function varargout = ViewCellTracks(varargin)
 
 % Edit the above text to modify the response to help ViewCellTracks
 
-% Last Modified by GUIDE v2.5 23-Jan-2018 13:51:12
+% Last Modified by GUIDE v2.5 29-Jan-2018 15:57:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -82,27 +82,40 @@ function slider1_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
-
+xyt = handles.tracks;    
 handles.currT = int32(get(handles.slider1, 'Value'));
-% axes(handles.axes1);hold off
-UpdateImage(handles,handles.currT);
-xyt_curr = handles.fulltrack ;
+toview = size(handles.tracktoplot,2);
+hold on;UpdateImage(handles,handles.currT)
+xyt_curr = struct;sz_tmp = [];
+for jj=1:toview
+   xyt_curr(jj).fulltrack = xyt(handles.tracktoplot(jj)).dat;
+   sz_tmp(jj) = size(xyt(handles.tracktoplot(jj)).dat,1);   
+end
+handles.fulltrack = xyt_curr;
 colormap = handles.colormap;
-handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
-if  handles.currT<=size(xyt_curr,1)% not all cells are tracked all the way
-hplot2 = plot(xyt_curr(handles.currT,1),xyt_curr(handles.currT,2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);
-title(['Current time point  ' num2str(xyt_curr(handles.currT,3)*handles.delta_t/60)   'hrs since start; Frame(' num2str(xyt_curr(handles.currT,3)) ')']);
-handles.residualdat = hplot2;
-else % if the slider is pressed, and the track lost, only the image will be shown
-title(['This Track ID was lost. Current Frame(' num2str(handles.currT) ')'],'Color','r');
-handles.residualdat = [];
+%handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+for k =1:toview
+ firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
+    if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
+        if xyt_curr(k).fulltrack(handles.currT,1)>0 % tracks that were assigned after first time point, have zeros in the beginning so don't plot them
+            
+            hplot2 = plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2)...
+                ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+            text(xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
+                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:));hold on
+        else
+            disp(['Track ID ' num2str(handles.tracktoplot(k)) 'was picked up in frame' num2str(firstT(k))]);
+        end
+
 end
-if isfinite(handles.tracktoplot)
-%get rid of the plot of the older track
-delete(handles.oldlabel);
 end
-%handles.residualdat.Visible = 'off';
+title(['Current time point  ' num2str((handles.currT*handles.delta_t)/60)  ...
+    'hrs since start; Frame(' num2str(handles.currT) ')']);hold on
+handles.ValidTrackIDtoSaveStatText.Visible = 'On';
+set(handles.ValidTrackIDtoSaveStatText,'String','TrackIDtoSave');
+handles.ReadValidTrackID.Visible = 'On';
+set(handles.ReadValidTrackID,'String','');
+
 guidata(hObject, handles);
 
 
@@ -116,6 +129,7 @@ function slider1_CreateFcn(hObject, eventdata, handles)
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
+handles.ShowFullTrack.Visible = 'On';
 
 function ReadTrackID_Callback(hObject, eventdata, handles)
 % hObject    handle to ReadTrackID (see GCBO)
@@ -124,19 +138,35 @@ function ReadTrackID_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of ReadTrackID as text
 %        str2double(get(hObject,'String')) returns contents of ReadTrackID as a double
+readinput= str2double(get(handles.ReadTrackID, 'String'));
+if (readinput <= handles.total_tracks) && ( readinput>0)
+handles.counter = handles.counter+1;% any tme a new track is input, the counter is incremented    
+handles.tracktoplot(handles.counter) = readinput;
+handles.colormap = prism;      
 handles.PlotTrackID.Visible = 'On';
-handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+handles.ShowFullTrack.Visible = 'On';
+%handles.fulltrack = handles.tracks(handles.tracktoplot).dat;
+colormap = prism;
+randcolor = randi(size(colormap,1));% select the track label color once
+handles.trackcolor(handles.counter) = randcolor;
+disp(['Cell tracks to watch simultaneously: ' num2str(handles.counter) ]);
+end
 if handles.tracktoplot > handles.total_tracks
     disp(['There are ' num2str(handles.total_tracks) ' tracks in this image']);
     handles.PlotTrackID.Visible = 'Off';
+    handles.ShowFullTrack.Visible = 'Off';
     return
 end
 if handles.tracktoplot == 0
     disp('Track ID must be greater than 0');
     handles.PlotTrackID.Visible = 'Off';
+    handles.ShowFullTrack.Visible = 'Off';
     return
 end
+%disp(handles.clicked)
 guidata(hObject, handles);
+
+
 % --- Executes during object creation, after setting all properties.
 function ReadTrackID_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to ReadTrackID (see GCBO)
@@ -149,38 +179,29 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
 % --- Executes on button press in PlotTrackID.
 function PlotTrackID_Callback(hObject, eventdata, handles)
 % hObject    handle to PlotTrackID (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% TODO: here try to clear hobject or handles, since after couple tracks,
-% gui gets very slow
-colormap = prism;
-randcolor = randi(size(colormap,1));% select the track label color once
 xyt = handles.tracks;
-handles.trackcolor = randcolor;
-handles.colormap = prism;
-
-if handles.tracktoplot > 0 
-firstT = xyt(handles.tracktoplot).dat(1,3);
-handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
-handles.fulltrack = xyt(handles.tracktoplot).dat;
-axes(handles.axes1); hold on
+colormap = handles.colormap;
+if handles.tracktoplot(handles.counter) > 0 
+firstT = min(nonzeros(xyt(handles.tracktoplot(handles.counter)).dat(:,3)));%xyt(handles.tracktoplot(handles.counter)).dat(1,3)
+% handles.tracktoplot(handles.counter) = str2double(get(handles.ReadTrackID, 'String'));
 % anytime a new track id is chosen, set the slider to initial time point
 set(handles.slider1, 'Value', 1); 
-UpdateImage(handles,firstT);
-
-if ~isempty(xyt(handles.tracktoplot).dat)
-hdata  = plot(xyt(handles.tracktoplot).dat(firstT,1),xyt(handles.tracktoplot).dat(firstT,2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor,:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
-title(['Current time point:  ' num2str(xyt(handles.tracktoplot).dat(firstT,3)*handles.delta_t/60)   'hrs since start']);
+%UpdateImage(handles,firstT);hold on
+if ~isempty(xyt(handles.tracktoplot(handles.counter)).dat)
+hdata  = plot(xyt(handles.tracktoplot(handles.counter)).dat(firstT,1),xyt(handles.tracktoplot(handles.counter)).dat(firstT,2)...
+    ,'p','MarkerFaceColor',colormap(handles.trackcolor(handles.counter),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+title(['The track starts at :  ' num2str(xyt(handles.tracktoplot(handles.counter)).dat(firstT,3)*handles.delta_t/60)   'hrs since start; Frame' num2str(firstT)]);
 handles.oldlabel = hdata;
 else
     disp('Choose another trackID, this track is empty')
 end
 end
+handles.ShowFullTrack.Visible = 'On';
 guidata(hObject, handles);
 
 % --- Executes on button press in loadmaxprojections.
@@ -226,6 +247,7 @@ function loadtrackingdata_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.DisplayTotalTracksField,'String','N');
+handles.validtrackIDcount = 1;% initialize the validTrack counter
 tracks.Ilastikfile_TrackingData_h5 ={ {'uigetfile(''.'')'} };
 %tracks.trackedcelltype =0;
 tracks = StructDlg(tracks);
@@ -239,6 +261,9 @@ set(handles.DisplayTotalTracksField,'String',num2str(handles.total_tracks));
 handles.TotalTracksStaticText.Visible = 'On';
 handles.ReadTrackID.Visible = 'On';
 handles.ClearButton.Visible = 'On';
+handles.counter= 0; % to increment the number of chosen cells to track
+% show the first frame of the movie
+UpdateImage(handles,1);hold on
 guidata(hObject, handles);
 
 function [multi_img,nt] = loadProjections(handles)
@@ -254,7 +279,7 @@ multi_img(:,:,jj) = (proj{1}{jj});
 end
 
 function UpdateImage(handles,time)
-imshow(handles.allprojections(:,:,time),[0 3500],'Parent',handles.axes1);
+imshow(handles.allprojections(:,:,time),[0 3500],'Parent',handles.axes1);hold on
 
 
 function [coordintime] = extracktIlastikTracks(handles)
@@ -285,13 +310,21 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
-
 % --- Executes on button press in ClearButton.
 function ClearButton_Callback(hObject, eventdata, handles)
 % hObject    handle to ClearButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+%handles.PlotTrackID.Visible = 'Off';
+handles.counter = 0;
+handles.validtrackIDcount = 1;
+handles.validtrack = [];
+handles.tracktoplot = [];
+handles.trackcolor = [];
+handles.SaveTrackIDs.Visible = 'Off';
+handles.ShowFullTrack.Visible = 'Off';
+handles.ValidTrackIDtoSaveStatText.Visible = 'Off';
+handles.ReadValidTrackID.Visible = 'Off';
 axes(handles.axes1);hold off
 cla reset;
 handles.axes1.YTickLabel=[];
@@ -300,8 +333,9 @@ box on
 delete(handles.axes1.Children)
 set(handles.slider1, 'Value', 1); 
 set(handles.ReadTrackID,'String','Track ID');
+UpdateImage(handles,1);% show first frame when clear button is pressed
+title(['Current time point  ' num2str(1*handles.delta_t/60)   'hrs since start; Frame(' num2str(1) ')']);hold on
 guidata(hObject, handles);
-
 
 % --- Executes during object creation, after setting all properties.
 function TotalTracksStaticText_CreateFcn(hObject, eventdata, handles)
@@ -309,13 +343,100 @@ function TotalTracksStaticText_CreateFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
+% --- Executes on button press in ShowFullTrack.
+function ShowFullTrack_Callback(hObject, eventdata, handles)
+% hObject    handle to ShowFullTrack (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+xyt = handles.tracks;
+ toview = size(handles.tracktoplot,2);
+xyt_curr = struct;
+for jj=1:toview
+   xyt_curr(jj).fulltrack = xyt(handles.tracktoplot(jj)).dat;  
+end
+handles.fulltrack = xyt_curr; 
+handles.currT = int32(get(handles.slider1, 'Value'));
+UpdateImage(handles,1);hold on
+colormap = handles.colormap;
+%handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+for k=1:toview
+ firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
+if  ~isempty(handles.currT)% 
+hplot2 = plot(xyt_curr(k).fulltrack(firstT(k)+1:end-1,1),xyt_curr(k).fulltrack(firstT(k)+1:end-1,2)...
+    ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+plot(xyt_curr(k).fulltrack(firstT(k),1),xyt_curr(k).fulltrack(firstT(k),2)...
+    ,'d','MarkerFaceColor','r','MarkerEdgeColor','y','MarkerSize',5,'LineWidth',1);hold on
+text(xyt_curr(k).fulltrack(firstT(k),1)+8,xyt_curr(k).fulltrack(firstT(k),2)+5,'Start','Color','r','FontSize',8);hold on
+plot(xyt_curr(k).fulltrack(end,1),xyt_curr(k).fulltrack(end,2)...
+    ,'d','MarkerFaceColor','g','MarkerEdgeColor','k','MarkerSize',5,'LineWidth',1);hold on
+text(xyt_curr(k).fulltrack(end,1)+8,xyt_curr(k).fulltrack(end,2)+5,'End','Color','g','FontSize',8);hold on
+
+end
+end
+title('Frame 1, movie start shown');
+set(handles.slider1, 'Value', 1); 
+guidata(hObject, handles);
+
+
+function ReadValidTrackID_Callback(hObject, eventdata, handles)
+% hObject    handle to ReadValidTrackID (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of ReadValidTrackID as text
+%        str2double(get(hObject,'String')) returns contents of ReadValidTrackID as a double
+handles.SaveTrackIDs.Visible = 'On';
+tmp = get(handles.ReadValidTrackID,'String');
+validtrack = str2double(tmp);
+handles.validtrack(handles.validtrackIDcount)=validtrack;
+handles.validtrackIDcount = handles.validtrackIDcount+1;
+set(handles.ReadValidTrackID,'String','');% set the input field back to empty
+%display the saved goodtracks
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function ReadValidTrackID_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to ReadValidTrackID (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function ValidTrackIDtoSaveStatText_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to ValidTrackIDtoSaveStatText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% --- Executes on button press in SaveTrackIDs.
+function SaveTrackIDs_Callback(hObject, eventdata, handles)
+% hObject    handle to SaveTrackIDs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+platf = ispc;% see if PC or MAC to use the '/' correctly for the save path
+goodtracks = handles.validtrack;
+if platf == 1
+    fname = [num2str(handles.dir) '\ValidTrackIDs_position' num2str(handles.pos) '_chan_w000' num2str(handles.chan-1) '.mat' ];
+else
+    fname = [num2str(handles.dir) '/ValidTrackIDs_position' num2str(handles.pos) '_chan_w000' num2str(handles.chan-1) '.mat' ];
+end
+    save(fname,'goodtracks');
+disp('Saved valid trackIDs to file');
+handles.validtrackIDcount = 1;% reset the validTrack counter
+guidata(hObject, handles);
+
 % TODO: sizing; try to rescale
-% TODO: if don't select any trackID the slider clicking should just scroll
-% the movie
 % TODO: look into lagging after looking at couple tracks...seems that a
 % little slower response
-
-% TODO: maybe add the feature where you can input the good trackID (after lookig at it via GUI) and save
-% it back for analysis.
+% TODO: try to intergrate with the signaling/fluorescence quantification
+% data
 % TODO: other channel input (image) or other segmented cells input(plot
 % other cell type), although this will only be relevant to sorting
+
