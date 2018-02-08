@@ -86,7 +86,8 @@ xyt = handles.tracks;
 handles.currT = int32(get(handles.slider1, 'Value'));
 set(handles.ShowTrackIDs,'String','ShowTrackIDs');
 toview = size(handles.tracktoplot,2);
-hold on;UpdateImage(handles,handles.currT)
+hold on;UpdateImage(handles,handles.currT);
+if ~isempty(handles.tracktoplot)
 xyt_curr = struct;sz_tmp = [];
 for jj=1:toview
    xyt_curr(jj).fulltrack = xyt(handles.tracktoplot(jj)).dat;
@@ -112,6 +113,7 @@ end
 end
 title(['Current time point  ' num2str((handles.currT*handles.delta_t)/60)  ...
     'hrs since start; Frame(' num2str(handles.currT) ')']);hold on
+end
 handles.ValidTrackIDtoSaveStatText.Visible = 'On';
 set(handles.ValidTrackIDtoSaveStatText,'String','TrackIDtoSave');
 handles.ReadValidTrackID.Visible = 'On';
@@ -187,12 +189,17 @@ function PlotTrackID_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 xyt = handles.tracks;
 colormap = handles.colormap;
-if handles.tracktoplot(handles.counter) > 0 
+if handles.counter == 0
+   disp('input trackID');
+   return
+end
+if (handles.tracktoplot(handles.counter)) > 0 && (~isempty(handles.tracktoplot))
 firstT = min(nonzeros(xyt(handles.tracktoplot(handles.counter)).dat(:,3)));%xyt(handles.tracktoplot(handles.counter)).dat(1,3)
 % handles.tracktoplot(handles.counter) = str2double(get(handles.ReadTrackID, 'String'));
 % anytime a new track id is chosen, set the slider to initial time point
 set(handles.slider1, 'Value', 1); 
-%UpdateImage(handles,firstT);hold on
+%UpdateImage(handles,firstT);hold on% if keep here then the current tracks
+%are not displayed
 if ~isempty(xyt(handles.tracktoplot(handles.counter)).dat)
 hdata  = plot(xyt(handles.tracktoplot(handles.counter)).dat(firstT,1),xyt(handles.tracktoplot(handles.counter)).dat(firstT,2)...
     ,'p','MarkerFaceColor',colormap(handles.trackcolor(handles.counter),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
@@ -203,6 +210,7 @@ else
 end
 end
 handles.ShowFullTrack.Visible = 'On';
+
 guidata(hObject, handles);
 
 % --- Executes on button press in loadmaxprojections.
@@ -251,11 +259,17 @@ set(handles.DisplayTotalTracksField,'String','N');
 handles.validtrackIDcount = 1;% initialize the validTrack counter
 [tracks.Ilastikfile_TrackingData_h5, pathname] =uigetfile('*.h5','File Selector');%uigetfile('All Files (*.*)','File Selector');%{ {'uigetfile(''.'')'} }
 handles.ShowTrackIDsState = 1; % initialize the state of the counter of how many times the button was pressed
+handles.ShowFullTrack_State = 1;
 tracks = StructDlg(tracks);
 handles.ilastikfile = fullfile(pathname,tracks.Ilastikfile_TrackingData_h5);
 [coordintime] = extracktIlastikTracks(handles);
 handles.tracks = coordintime;
-%handles.tracktoplot = [];
+
+% these default values are only used if user clickes slider without
+% selecting the trackid 
+handles.tracktoplot = [];% default track; gets reset onece the actual track is selected
+handles.colormap = jet;% default track; gets reset onece the actual track is selected
+handles.trackcolor = 1;% default track; gets reset onece the actual track is selected
 handles.total_tracks = size(coordintime,2);
 handles.DisplayTotalTracksField.Visible = 'On';
 handles.ShowTrackIDs.Visible = 'On';
@@ -282,8 +296,8 @@ multi_img(:,:,jj) = (proj{1}{jj});
 end
 
 function UpdateImage(handles,time)
-imshow(handles.allprojections(:,:,time),[500 3000],'Parent',handles.axes1);hold on
-
+displayedImg=imshow(handles.allprojections(:,:,time),[500 3000],'Parent',handles.axes1);hold on
+set(displayedImg, 'ButtonDownFcn', @(src, evnt)IDclickedcell(src, evnt, handles));% @IDclickedcell@(src, evnt)IDclickedcell(src, evnt, handles)
 
 function [coordintime] = extracktIlastikTracks(handles)
 % here fully use Ilastik Automatic tracking 
@@ -321,7 +335,8 @@ function ClearButton_Callback(hObject, eventdata, handles)
 %handles.PlotTrackID.Visible = 'Off';
 handles.counter = 0;
 handles.validtrackIDcount = 1;
-handles.ShowTrackIDsState = 1; 
+handles.ShowTrackIDsState = 1;
+handles.ShowFullTrack_State = 1;
 handles.validtrack = [];
 handles.tracktoplot = [];
 handles.trackcolor = [];
@@ -356,8 +371,17 @@ function ShowFullTrack_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %handles.tracktoplot = str2double(get(handles.ReadTrackID, 'String'));
+handles.ShowFullTrack_State = handles.ShowFullTrack_State+1;
 xyt = handles.tracks;
- toview = size(handles.tracktoplot,2);
+handles.currT = int32(get(handles.slider1, 'Value'));
+%disp(handles.ShowFullTrack_State);
+if mod(handles.ShowFullTrack_State,2) >0 % if odd
+set(handles.ShowFullTrack,'String','ShowFullTrack');
+UpdateImage(handles,handles.currT);hold on
+end
+if mod(handles.ShowFullTrack_State,2) ==0 % if even
+set(handles.ShowFullTrack,'String','HideFullTrack');
+toview = size(handles.tracktoplot,2);
 xyt_curr = struct;
 for jj=1:toview
    xyt_curr(jj).fulltrack = xyt(handles.tracktoplot(jj)).dat;  
@@ -371,18 +395,19 @@ for k=1:toview
  firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
 if  ~isempty(handles.currT)% 
 hplot2 = plot(xyt_curr(k).fulltrack(firstT(k)+1:end-1,1),xyt_curr(k).fulltrack(firstT(k)+1:end-1,2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
+    ,'*','Color',colormap(handles.trackcolor(k),:),'MarkerSize',3,'LineWidth',1);hold on
 plot(xyt_curr(k).fulltrack(firstT(k),1),xyt_curr(k).fulltrack(firstT(k),2)...
-    ,'d','MarkerFaceColor','r','MarkerEdgeColor','y','MarkerSize',5,'LineWidth',1);hold on
+    ,'p','MarkerFaceColor','r','MarkerEdgeColor','w','MarkerSize',6,'LineWidth',1);hold on
 text(xyt_curr(k).fulltrack(firstT(k),1)+8,xyt_curr(k).fulltrack(firstT(k),2)+5,'Start','Color','r','FontSize',8);hold on
 plot(xyt_curr(k).fulltrack(end,1),xyt_curr(k).fulltrack(end,2)...
-    ,'d','MarkerFaceColor','g','MarkerEdgeColor','k','MarkerSize',5,'LineWidth',1);hold on
+    ,'p','MarkerFaceColor','g','MarkerEdgeColor','w','MarkerSize',6,'LineWidth',1);hold on
 text(xyt_curr(k).fulltrack(end,1)+8,xyt_curr(k).fulltrack(end,2)+5,'End','Color','g','FontSize',8);hold on
 
 end
 end
 title('Frame 1, movie start shown');
 set(handles.slider1, 'Value', 1); 
+end
 guidata(hObject, handles);
 
 
@@ -438,15 +463,6 @@ disp('Saved valid trackIDs to file');
 handles.validtrackIDcount = 1;% reset the validTrack counter
 guidata(hObject, handles);
 
-% TODO: sizing; try to rescale
-% TODO: look into lagging after looking at couple tracks...seems that a
-% little slower response
-% TODO: try to intergrate with the signaling/fluorescence quantification
-% data
-% TODO: other channel input (image) or other segmented cells input(plot
-% other cell type), although this will only be relevant to sorting
-
-
 % --- Executes on button press in ShowTrackIDs.
 function ShowTrackIDs_Callback(hObject, eventdata, handles)
 % hObject    handle to ShowTrackIDs (see GCBO)
@@ -476,8 +492,8 @@ for jj=1:size(xyt,2)
     end
  end
 hdata  = plot(allIDdata(:,1),allIDdata(:,2)...
-    ,'*b','MarkerSize',3,'LineWidth',1);hold on
-text(allIDdata(:,1)+3*ones(size(allIDdata(:,1))),allIDdata(:,2)+5*ones(size(allIDdata(:,1))),num2str(allIDdata(:,3)),'FontSize',7,'Color','y');
+    ,'*m','MarkerSize',3,'LineWidth',1);hold on
+text(allIDdata(:,1)+3*ones(size(allIDdata(:,1))),allIDdata(:,2)+5*ones(size(allIDdata(:,1))),num2str(allIDdata(:,3)),'FontSize',7,'Color','g');
 end
 guidata(hObject, handles);
 
@@ -486,3 +502,29 @@ function ShowTrackIDs_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to ShowTrackIDs (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
+
+
+function IDclickedcell(src,evnt,handles)
+handles = guidata(src);
+clickedXY = get(handles.axes1, 'CurrentPoint');
+xy = [clickedXY(1,1) clickedXY(1,2)];
+% find the trackID of the clicked cell 
+xyt = handles.tracks;
+allIDdata = [];
+handles.currT = int32(get(handles.slider1, 'Value'));
+for jj=1:size(xyt,2)
+    firstT = min(nonzeros(xyt(jj).dat(:,3)));%does track exist at the currentT?
+    lastT = max(nonzeros(xyt(jj).dat(:,3))); %does track exist at the currentT
+    if (firstT<= handles.currT) &&  (handles.currT<=lastT)
+        allIDdata(jj,1:2)  = xyt(jj).dat(handles.currT,1:2);
+        allIDdata(jj,3)=jj;    % trackID label
+    end
+end
+closestcell= ipdm(xy,allIDdata(:,1:2), 'Subset', 'NearestNeighbor', 'Result', 'Structure');
+hdata  = plot(allIDdata(closestcell.columnindex,1),allIDdata(closestcell.columnindex,2)...
+    ,'*m','MarkerSize',3,'LineWidth',1);hold on
+text(allIDdata(closestcell.columnindex,1)+5,allIDdata(closestcell.columnindex,2)+5,...
+    num2str(allIDdata(closestcell.columnindex,3)),'FontSize',8,'Color','g');
+
+% TODO: intergrate with the signaling/fluorescence quantification
+% data
