@@ -575,6 +575,11 @@ function qFluorescenceCheckBox_Callback(hObject, eventdata, handles)
 % hObject    handle to qFluorescenceCheckBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if isempty(handles.matfile)
+    disp('Load Mat File first');
+    set(handles.qFluorescenceCheckBox,'Value',0);
+    return
+end
  handles.show_qFluorData_State= handles.show_qFluorData_State+1;
 if mod(handles.show_qFluorData_State,2)==0
     handles.show_qFluorData = 1;
@@ -582,7 +587,7 @@ end
 if mod(handles.show_qFluorData_State,2)>0
     handles.show_qFluorData  = 0;
 end
-disp(handles.show_qFluorData);  
+%disp(handles.show_qFluorData);  
     
 guidata(hObject, handles);
 
