@@ -141,8 +141,7 @@ if ~isempty(handles.matfile) && (handles.show_qFluorData==1)
         custommap = cool;
     end      
     %handles.axes1.Colorbar.Visible = 'off';
-    
-    %colorbar
+    colorbar
 end
 
 guidata(hObject, handles);
