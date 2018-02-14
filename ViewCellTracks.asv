@@ -22,7 +22,7 @@ function varargout = ViewCellTracks(varargin)
 
 % Edit the above text to modify the response to help ViewCellTracks
 
-% Last Modified by GUIDE v2.5 12-Feb-2018 19:37:37
+% Last Modified by GUIDE v2.5 13-Feb-2018 13:59:44
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -100,11 +100,10 @@ for k =1:toview
  firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
     if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
         if xyt_curr(k).fulltrack(handles.currT,1)>0 % tracks that were assigned after first time point, have zeros in the beginning so don't plot them
-            
-            hplot2 = plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2)...
-                ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor','k','MarkerSize',8,'LineWidth',1);hold on
-            text(xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
-                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:));hold on
+            plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2),'p',...
+                'MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:));hold on  
+            text(handles.axes1,xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
+                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',8);hold on
         else
             disp(['Track ID ' num2str(handles.tracktoplot(k)) 'was picked up in frame' num2str(firstT(k))]);
         end
@@ -119,22 +118,30 @@ set(handles.ValidTrackIDtoSaveStatText,'String','TrackIDtoSave');
 handles.ReadValidTrackID.Visible = 'On';
 set(handles.ReadValidTrackID,'String','');
 
-% do if the mat file was loaded;
+% do if the checkbox was selected and the matfile is loaded;
 if ~isempty(handles.matfile) && (handles.show_qFluorData==1)
     plotfluor = zeros(size(handles.quantifyselected,2),3);
     colormap2 = hot;% for the florIntensitydata
     for k=1:size(handles.quantifyselected,2)
+        if size(handles.quantifyselected(k).selected.dat,2)>=handles.currT % if the track exists at the slider position
         plotfluor(k,1:2) = round(handles.quantifyselected(k).selected.dat(handles.currT).xy);
         plotfluor(k,3) = handles.quantifyselected(k).selected.dat(handles.currT).fluor;
-        plot(handles.axes1,plotfluor(:,1),plotfluor(:,2),'o','MarkerFaceColor','y');hold on
-       % TODO: make a custom colormap for this which scales as the fluordatat or plot or use the scatter
-        %scatter(handles.axes1,plotfluor(:,1),plotfluor(:,2),[],plotfluor(:,3));hold on
-%         [cmin cmax]=caxis;
-%         caxis([0.5 2]); % typical limits for the nuc:cyto smad4 ratio
-%         colorbar
-    end
-%    if handles.quantifyselected(3).selected.dat(handles.currT).fluor
-%    end
+        custcolor = plotfluor(:,3);% make th fluor data a shade of red [ fluor 0 0]
+        custcolor(isnan(custcolor)) = 0;
+        custcolor(custcolor>1)=1;% if greater than 1, set to 1 (so red or blue or green)
+        custcolor(custcolor==0)=0.1;% if there's a zero fluor datapoint (no bio sence)
+        custommap = [custcolor zeros(size(custcolor)) ones(size(custcolor))];
+        hs=scatter(plotfluor(:,1),plotfluor(:,2),[],custommap,'o','filled');hold on      
+%        [cmin cmax]=caxis;
+%        caxis([0.1 1]) % typical limits for the nuc:cyto smad4 ratio
+       %colorbar
+        end
+        fluorallt= cat(1,handles.quantifyselected(k).selected.dat.fluor);
+        xyallt = round(cat(1,handles.quantifyselected(k).selected.dat.xy));
+        custommap = cool;
+    end      
+    %handles.axes1.Colorbar.Visible = 'off';
+    colorbar
 end
 
 guidata(hObject, handles);
@@ -279,10 +286,12 @@ handles.quantifyselected = [];
 handles.validtrackIDcount = 1;
 handles.ShowTrackIDsState = 1;
 handles.ShowFullTrack_State = 1;
-handles.show_qFluorData_State = 2;
+handles.show_qFluorData = 0;
 handles.validtrack = [];
 handles.tracktoplot = [];
 handles.trackcolor = [];
+set(handles.qFluorescenceCheckBox,'Value',0);
+handles.show_qFluorData_State = 1;
 handles.SaveTrackIDs.Visible = 'Off';
 % handles.loadMatfile.Visible = 'Off';
 handles.ShowTrackIDs.Visible = 'On';
@@ -294,6 +303,10 @@ axes(handles.axes1);hold off
 cla reset;
 handles.axes1.YTickLabel=[];
 handles.axes1.XTickLabel=[];
+% axes(handles.axes2);hold off
+% cla reset;
+% handles.axes2.YTickLabel=[];
+% handles.axes2.XTickLabel=[];
 box on
 delete(handles.axes1.Children)
 set(handles.slider1, 'Value', 1); 
@@ -338,7 +351,7 @@ for k=1:toview
  firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
 if  firstT(k)<=handles.currT % if this track has an XY at this time point
 hplot2 = plot(xyt_curr(k).fulltrack(firstT(k),1),xyt_curr(k).fulltrack(firstT(k),2)...
-    ,'p','Color',colormap(handles.trackcolor(k),:),'MarkerSize',5,'LineWidth',1);hold on
+    ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'MarkerSize',5,'LineWidth',1);hold on
 text(xyt_curr(k).fulltrack(firstT(k),1)+5,xyt_curr(k).fulltrack(firstT(k),2)+5,num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',8);hold on
 end
 end
@@ -419,12 +432,28 @@ function SaveTrackIDs_Callback(hObject, eventdata, handles)
 platf = ispc;% see if PC or MAC to use the '/' correctly for the save path
 goodtracks = handles.validtrack;
 if platf == 1
-    fname = [num2str(handles.dir) '\ValidTrackIDs_f' num2str(handles.pos-1) '_chan_w000' num2str(handles.chan-1) '.mat' ];
+    fname = [num2str(handles.dir) '\SelectedTrackIDsData_f' num2str(handles.pos-1) '_chan_w000' num2str(handles.chan-1) '.mat' ];
 else
-    fname = [num2str(handles.dir) '/ValidTrackIDs_f' num2str(handles.pos-1) '_chan_w000' num2str(handles.chan-1) '.mat' ];
+    fname = [num2str(handles.dir) '/SelectedTrackIDsData_f' num2str(handles.pos-1) '_chan_w000' num2str(handles.chan-1) '.mat' ];
 end
+
+if ~isempty(handles.matfile) && (handles.show_qFluorData==1)
+    q = 1;
+    fluor_selectedtracks = struct;
+    for jj=1:size(handles.quantifyselected,2)
+        tmp(jj) = handles.quantifyselected(jj).selected.dat(1).track;
+        tmp2 = find(tmp(jj) == goodtracks);
+        if ~isempty(tmp2)
+            fluor_selectedtracks(q).dat = handles.quantifyselected(jj).selected.dat;
+            q = q+1;
+        end
+    end
+    save(fname,'goodtracks','fluor_selectedtracks');disp('Saved selected trackIDs and their fluorescence quantification to file');
+    
+else
     save(fname,'goodtracks');
-disp('Saved valid trackIDs to file');
+    disp('Saved selected trackIDs to file');
+end
 handles.validtrackIDcount = 1;% reset the validTrack counter
 guidata(hObject, handles);
 
@@ -527,12 +556,15 @@ function loadMatfile_Callback(hObject, eventdata, handles)
 % here will need to have some checks on whether the file has the info on
 % each time point quntified or only the last time point
 handles.show_qFluorData = 0;
-handles.show_qFluorData_State = 1;
+handles.show_qFluorData_State =1;
+% handles.axes2.Visible='on';
+set(handles.qFluorescenceCheckBox,'Value',0);
 [tracks.fluorquantified, pathname_mat] =uigetfile('*.mat','File Selector');% 
 tracks = StructDlg(tracks);
 handles.matfile = fullfile(pathname_mat,tracks.fluorquantified);% the output .mat file of the Idse's analysis code, with the 'positions' containing all the data
 handles.quantifyselected = [];
 fluor_selectedtracks = struct;
+disp('Done');
 guidata(hObject, handles);
 
 function [closestcell]=getfluordata(handles,readinput)
@@ -573,6 +605,11 @@ function qFluorescenceCheckBox_Callback(hObject, eventdata, handles)
 % hObject    handle to qFluorescenceCheckBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+if isempty(handles.matfile)
+    disp('Load Mat File first');
+    set(handles.qFluorescenceCheckBox,'Value',0);
+    return
+end
  handles.show_qFluorData_State= handles.show_qFluorData_State+1;
 if mod(handles.show_qFluorData_State,2)==0
     handles.show_qFluorData = 1;
@@ -580,7 +617,7 @@ end
 if mod(handles.show_qFluorData_State,2)>0
     handles.show_qFluorData  = 0;
 end
-disp(handles.show_qFluorData);  
+%disp(handles.show_qFluorData);  
     
 guidata(hObject, handles);
 
