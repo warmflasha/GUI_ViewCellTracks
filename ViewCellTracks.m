@@ -283,6 +283,9 @@ handles.show_qFluorData = 0;
 handles.validtrack = [];
 handles.tracktoplot = [];
 handles.trackcolor = [];
+handles.clickedcellID=[];
+handles.clickedcellX=[];
+handles.clickedcellY=[];
 set(handles.qFluorescenceCheckBox,'Value',0);
 handles.show_qFluorData_State = 1;
 handles.SaveTrackIDs.Visible = 'Off';
@@ -521,15 +524,54 @@ handles.ShowFullTrack.Visible = 'On';
 colormap = handles.colormap;
 randcolor = randi(size(colormap,1));% select the track label color once
 handles.trackcolor(handles.counter) = randcolor;
-hdata  = plot(allIDdata(closestcell.columnindex,1),allIDdata(closestcell.columnindex,2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor(handles.counter),:),'MarkerEdgeColor',colormap(handles.trackcolor(handles.counter),:),'MarkerSize',8,'LineWidth',1);hold on
-text(allIDdata(closestcell.columnindex,1)+5,allIDdata(closestcell.columnindex,2)+5,...
-    num2str(allIDdata(closestcell.columnindex,3)),'FontSize',12,'Color',colormap(handles.trackcolor(handles.counter),:));
+handles.clickedcellID(handles.counter) = allIDdata(closestcell.columnindex,3);
+handles.clickedcellX(handles.counter)=allIDdata(closestcell.columnindex,1);
+handles.clickedcellY(handles.counter)=allIDdata(closestcell.columnindex,2);
 
+% if the fist cell is uncklicked
+if handles.counter ==2 && (handles.tracktoplot(handles.counter) == handles.tracktoplot(handles.counter-1))
+  handles.counter = 0;
+  handles.tracktoplot = [];
+  handles.trackcolor = [];  
+  handles.clickedcellID = [];
+  handles.clickedcellY = [];
+  handles.clickedcellX = [];
+ UpdateImage(handles,handles.currT); hold on;
+  
+end
+% here if the same cell was clicekd again (consecutively), make the cell label dissapear; 
+if (handles.counter > 2) && (handles.tracktoplot(handles.counter) == handles.tracktoplot(handles.counter-1))
+  handles.counter = handles.counter-2;
+  handles.tracktoplot = (handles.tracktoplot(1:end-2));
+  handles.trackcolor = handles.trackcolor(1:(handles.counter)); 
+  handles.clickedcellID = handles.clickedcellID(1:(handles.counter));
+  handles.clickedcellX = handles.clickedcellX(1:(handles.counter));
+  handles.clickedcellY=  handles.clickedcellY(1:(handles.counter));    
+  UpdateImage(handles,handles.currT); hold on;
+end
+% if the cell was unclicked later on,after selecting some more cells
+if (handles.counter > 2) && any(handles.tracktoplot(handles.counter) == (handles.tracktoplot(1:handles.counter-1)))
+  [~,c]=find(handles.tracktoplot(handles.counter) ~= handles.tracktoplot);% any trackIDs that don't match the clicked one
+    handles.counter = handles.counter-2;% each click only two trackIDs can be eliminated
+    % so ok to hard code this '2' below
+  handles.tracktoplot = (handles.tracktoplot(c));
+  handles.trackcolor = handles.trackcolor(c); 
+  handles.clickedcellID = handles.clickedcellID(c);
+  handles.clickedcellX = handles.clickedcellX(c);
+  handles.clickedcellY=  handles.clickedcellY(c);    
+  UpdateImage(handles,handles.currT); hold on;
+end
 
-
+for jj=1:handles.counter  
+hdata  = plot(handles.clickedcellX(jj),handles.clickedcellY(jj)...
+    ,'.','MarkerFaceColor',colormap(handles.trackcolor(jj),:),'MarkerEdgeColor',colormap(handles.trackcolor(jj),:),'MarkerSize',1,'LineWidth',1);hold on
+tdata = text(handles.clickedcellX(jj)+5,handles.clickedcellY(jj)+5,...
+    num2str(handles.clickedcellID(jj)),'FontSize',12,'Color',colormap(handles.trackcolor(jj),:));
+end
+%TODO: make the handles.valid tracks be populated by the clicked cells, so
+%only need to cklick save, without manually inputting tracks
 disp(['Cell tracks to watch simultaneously: ' num2str(handles.counter) ]);
-
+%TODO: make the above work for when the qfluor is clicked
 if ~isempty(handles.matfile) && (handles.show_qFluorData == 1)
 % the function below will get the fluoresence quantification data for each
 % clicked cell for all time points availabe in the .mat file
