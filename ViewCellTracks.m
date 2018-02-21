@@ -495,7 +495,7 @@ if handles.counter ==2 && (handles.tracktoplot(handles.counter) == handles.track
   handles.clickedcellID = [];
   handles.clickedcellY = [];
   handles.clickedcellX = [];
-  UpdateImage(handles,handles.currT); hold on;
+  UpdateImage(handles,handles.currT); 
  
 end
 % here if the same cell was clicekd again (consecutively), make the cell label dissapear; 
@@ -506,7 +506,7 @@ if (handles.counter > 2) && (handles.tracktoplot(handles.counter) == handles.tra
   handles.clickedcellID = handles.clickedcellID(1:(handles.counter));
   handles.clickedcellX = handles.clickedcellX(1:(handles.counter));
   handles.clickedcellY=  handles.clickedcellY(1:(handles.counter));    
-  UpdateImage(handles,handles.currT); hold on;
+  UpdateImage(handles,handles.currT); 
   
 end
 % if the cell was unclicked later on,after selecting some more cells
@@ -518,15 +518,17 @@ if (handles.counter > 2) && any(handles.tracktoplot(handles.counter) == (handles
   handles.clickedcellID = handles.clickedcellID(c);
   handles.clickedcellX = handles.clickedcellX(c);
   handles.clickedcellY=  handles.clickedcellY(c);    
-  UpdateImage(handles,handles.currT); hold on;
+  UpdateImage(handles,handles.currT);
   
 end
 fluor_selectedtracks = struct;
 handles.quantifyselected = [];
-
+% tdata.String = [];
+UpdateImage(handles,handles.currT);
 for jj=1:handles.counter%size(handles.tracktoplot,2)  
 % hdata  = plot(handles.clickedcellX(jj),handles.clickedcellY(jj)...
 %     ,'.','MarkerFaceColor',colormap(handles.trackcolor(jj),:),'MarkerEdgeColor',colormap(handles.trackcolor(jj),:),'MarkerSize',1,'LineWidth',1);hold on
+
 tdata = text(handles.clickedcellX(jj)+5,handles.clickedcellY(jj)+5,...
     num2str(handles.clickedcellID(jj)),'FontSize',12,'Color',colormap(handles.trackcolor(jj),:));
 
