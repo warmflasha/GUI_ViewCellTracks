@@ -117,15 +117,16 @@ for k =1:toview
     if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
         if xyt_curr(k).fulltrack(handles.currT,1)>0 % tracks that were assigned after first time point, have zeros in the beginning so don't plot them
             plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2),'p',...
-                'MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'Markersize',5);hold on  
+                'MarkerFaceColor',handles.trackcolor(k).color(1,1:3),'MarkerEdgeColor',handles.trackcolor(k).color(1,1:3),'Markersize',5);hold on  
             text(handles.axes1,xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
-                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on
+                num2str(handles.tracktoplot(k)),'Color',handles.trackcolor(k).color(1,1:3),'FontSize',12);hold on
         else
             disp(['Track ID ' num2str(handles.tracktoplot(k)) 'was picked up in frame' num2str(firstT(k))]);
         end
 
 end
 end
+%disp((handles.currT*handles.delta_t)/60)
 title(['Current time point  ' num2str((double(handles.currT)*handles.delta_t)/60)  ...
     'hrs since start; Frame(' num2str(handles.currT) ')']);hold on
 end
@@ -138,7 +139,7 @@ if ~isempty(handles.matfile) && (handles.show_qFluorData==1)
         if size(handles.quantifyselected(k).selected.dat,2)>=handles.currT % if the track exists at the slider position
         plotfluor(k,1:2) = round(handles.quantifyselected(k).selected.dat(handles.currT).xy);
         plotfluor(k,3) = handles.quantifyselected(k).selected.dat(handles.currT).fluor;
-        text(handles.axes1,plotfluor(k,1)+10,plotfluor(k,2)-25,num2str(plotfluor(k,3),2),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on  
+        text(handles.axes1,plotfluor(k,1)+10,plotfluor(k,2)-25,num2str(plotfluor(k,3),2),'Color',handles.trackcolor(k).color(1,1:3),'FontSize',12);hold on  
         end              
     end    
 end
@@ -347,8 +348,8 @@ for k=1:toview
  firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
 if  firstT(k)<=handles.currT % if this track has an XY at this time point
 hplot2 = plot(xyt_curr(k).fulltrack(firstT(k),1),xyt_curr(k).fulltrack(firstT(k),2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'MarkerSize',8,'LineWidth',1);hold on
-text(xyt_curr(k).fulltrack(firstT(k),1)+5,xyt_curr(k).fulltrack(firstT(k),2)+5,num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on
+    ,'p','MarkerFaceColor',handles.trackcolor(k).color(1,1:3),'MarkerEdgeColor',handles.trackcolor(k).color(1,1:3),'MarkerSize',8,'LineWidth',1);hold on
+text(xyt_curr(k).fulltrack(firstT(k),1)+5,xyt_curr(k).fulltrack(firstT(k),2)+5,num2str(handles.tracktoplot(k)),'Color',handles.trackcolor(k).color(1,1:3),'FontSize',12);hold on
 end
 end
 %title(['Frame ' num2str(handles.currT) ]);
@@ -368,7 +369,7 @@ for k=1:toview
  firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3))); 
 if  ~isempty(handles.currT)% 
 hplot2 = plot(xyt_curr(k).fulltrack(firstT(k)+1:end-1,1),xyt_curr(k).fulltrack(firstT(k)+1:end-1,2)...
-    ,'*','Color',colormap(handles.trackcolor(k),:),'MarkerSize',3,'LineWidth',1);hold on
+    ,'*','Color',handles.trackcolor(k).color(1,1:3),'MarkerSize',3,'LineWidth',1);hold on
 plot(xyt_curr(k).fulltrack(firstT(k),1),xyt_curr(k).fulltrack(firstT(k),2)...
     ,'p','MarkerFaceColor','r','MarkerEdgeColor','w','MarkerSize',6,'LineWidth',1);hold on
 text(xyt_curr(k).fulltrack(firstT(k),1)+8,xyt_curr(k).fulltrack(firstT(k),2)+5,'Start','Color','r','FontSize',8);hold on
@@ -481,8 +482,8 @@ handles.colormap = prism;
 handles.PlotTrackID.Visible = 'On';
 handles.ShowFullTrack.Visible = 'On';
 colormap = handles.colormap;
-randcolor = randi(size(colormap,1));%randi(size(colormap,1))     select the track label color once
-handles.trackcolor(handles.counter) = randcolor;
+randcolor = [rand(1) rand(1) rand(1)];%randi(size(colormap,1))     select the track label color once
+handles.trackcolor(handles.counter).color(1,1:3) = randcolor;
 handles.clickedcellID(handles.counter) = allIDdata(closestcell.columnindex,3);
 handles.clickedcellX(handles.counter)=allIDdata(closestcell.columnindex,1);
 handles.clickedcellY(handles.counter)=allIDdata(closestcell.columnindex,2);
@@ -501,8 +502,8 @@ end
 % here if the same cell was clicekd again (consecutively), make the cell label dissapear; 
 if (handles.counter > 2) && (handles.tracktoplot(handles.counter) == handles.tracktoplot(handles.counter-1))
   handles.counter = handles.counter-2;
-  handles.tracktoplot = (handles.tracktoplot(1:end-2));  
-      handles.trackcolor=handles.trackcolor(1:handles.counter);  
+  handles.tracktoplot = (handles.tracktoplot(1:end-2));
+  handles.trackcolor = handles.trackcolor(1:(handles.counter)).color(1,1:3); 
   handles.clickedcellID = handles.clickedcellID(1:(handles.counter));
   handles.clickedcellX = handles.clickedcellX(1:(handles.counter));
   handles.clickedcellY=  handles.clickedcellY(1:(handles.counter));    
@@ -512,9 +513,9 @@ end
 % if the cell was unclicked later on,after selecting some more cells
 if (handles.counter > 2) && any(handles.tracktoplot(handles.counter) == (handles.tracktoplot(1:handles.counter-1)))
   [~,c]=find(handles.tracktoplot(handles.counter) ~= handles.tracktoplot);% any trackIDs that don't match the clicked one
-   handles.counter = handles.counter-2;
-  handles.tracktoplot = handles.tracktoplot(c);  
-   handles.trackcolor= handles.trackcolor(c);  
+    handles.counter = handles.counter-2;
+  handles.tracktoplot = (handles.tracktoplot(c));
+  handles.trackcolor.color(1,1:3) = handles.trackcolor(c).color(1,1:3); 
   handles.clickedcellID = handles.clickedcellID(c);
   handles.clickedcellX = handles.clickedcellX(c);
   handles.clickedcellY=  handles.clickedcellY(c);    
@@ -528,7 +529,7 @@ for jj=1:handles.counter%size(handles.tracktoplot,2)
 % hdata  = plot(handles.clickedcellX(jj),handles.clickedcellY(jj)...
 %     ,'.','MarkerFaceColor',colormap(handles.trackcolor(jj),:),'MarkerEdgeColor',colormap(handles.trackcolor(jj),:),'MarkerSize',1,'LineWidth',1);hold on
 tdata = text(handles.clickedcellX(jj)+5,handles.clickedcellY(jj)+5,...
-    num2str(handles.clickedcellID(jj)),'FontSize',12,'Color',colormap(handles.trackcolor(jj),:));
+    num2str(handles.clickedcellID(jj)),'FontSize',12,'Color',handles.trackcolor(jj).color(1,1:3));
 
 if ~isempty(handles.matfile) && (handles.show_qFluorData == 1)
 % the function below will get the fluoresence quantification data for each
@@ -631,15 +632,13 @@ if isempty(handles.quantifyselected)
     disp('Select cells after clicking the checkbox')
     return
 end
-%TODO: add the different symbols, since sometimes the tracks have the same
-%color
 legendstr = cell(size(handles.quantifyselected,2),1);
 for x=1:size(handles.quantifyselected,2)
     
  fluorallt(x).intensity= cat(1,handles.quantifyselected(x).selected.dat.fluor);
  fluorallt(x).coord = round(cat(1,handles.quantifyselected(x).selected.dat.xy));
  figure(1),plot(fluorallt(x).intensity,'Color',...
-     colormap(handles.trackcolor(x),:),'LineWidth',3);hold on; box on 
+     handles.trackcolor(x).color(1,1:3),'LineWidth',3);hold on; box on 
  limitsX(x) = size(fluorallt(x).intensity,1);
  limitsY(x) = max(fluorallt(x).intensity);
  legendstr{x} = num2str(handles.tracktoplot(x));
@@ -672,12 +671,6 @@ handles.SaveTrackIDs.Visible = 'On';
 handles.counter = handles.counter+1;% any tme a new track is input, the counter is incremented    
 inputID = str2double(get(handles.InputTrackID_toLocateOnImage, 'String'));
 handles.tracktoplot(handles.counter) = inputID;
-if (inputID > handles.total_tracks)
-    disp('This number exceeds total number of tracks');
-    set(handles.InputTrackID_toLocateOnImage,'String','');
-    return
-end
-
 xyt = handles.tracks;    
 handles.currT = int32(get(handles.slider1, 'Value'));
 %set(handles.ShowTrackIDs,'String','ShowTrackIDs');
@@ -691,16 +684,16 @@ for jj=1:toview
 end
 handles.fulltrack = xyt_curr;
 colormap = handles.colormap;
-randcolor =randi(size(colormap,1)) ;%randi(size(colormap,1))  select the track label color once here
-handles.trackcolor(handles.counter) = randcolor;
+randcolor =[rand(1) rand(1) rand(1)] ;%randi(size(colormap,1))  select the track label color once here
+handles.trackcolor(handles.counter).color(1,1:3) = randcolor;
 for k =1:toview
  firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
     if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
         if xyt_curr(k).fulltrack(handles.currT,1)>0 % tracks that were assigned after first time point, have zeros in the beginning so don't plot them
             plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2),'p',...
-                'MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'Markersize',2);hold on  
+                'MarkerFaceColor',handles.trackcolor(k).color(1,1:3),'MarkerEdgeColor',handles.trackcolor(k).color(1,1:3),'Markersize',2);hold on  
             text(handles.axes1,xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
-                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on
+                num2str(handles.tracktoplot(k)),'Color',handles.trackcolor(k).color(1,1:3),'FontSize',12);hold on
         else
             disp(['Track ID ' num2str(handles.tracktoplot(k)) 'was picked up in frame' num2str(firstT(k))]);
         end
