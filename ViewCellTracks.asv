@@ -22,7 +22,7 @@ function varargout = ViewCellTracks(varargin)
 
 % Edit the above text to modify the response to help ViewCellTracks
 
-% Last Modified by GUIDE v2.5 21-Feb-2018 14:30:23
+% Last Modified by GUIDE v2.5 21-Feb-2018 13:08:42
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -132,10 +132,8 @@ end
 % do if the checkbox was selected and the matfile is loaded;
 if ~isempty(handles.matfile) && (handles.show_qFluorData==1)
     handles.PlotFluorData_SelectedCells.Visible = 'On';
-    if isempty(handles.displayedFluorData)
     handles.YlabelString.Visible = 'on';
-    set(handles.YlabelString,'String','PlotFluor Y label');
-    end
+    set(handles.YlabelString,'String','PlotFluor Ylabel');
     plotfluor = zeros(size(handles.quantifyselected,2),3);
     colormap2 = hot;% for the florIntensitydata
     for k=1:size(handles.quantifyselected,2)
@@ -217,7 +215,6 @@ handles.colormap = prism; % default map
 handles.tracktoplot = [];% default track; gets reset onece the actual track is selected
 handles.matfile = [];% if no matfile,only want to see tracking data
 handles.InputTrackID_toLocateOnImage.Visible = 'on';
-handles.ResetImageSize.Visible = 'on';
 set(handles.InputTrackID_toLocateOnImage,'String','LocateTrackID');
 handles.total_tracks = size(coordintime,2);
 handles.DisplayTotalTracksField.Visible = 'On';
@@ -300,7 +297,6 @@ handles.clickedcellY=[];
 set(handles.qFluorescenceCheckBox,'Value',0);
 handles.show_qFluorData_State = 1;
 handles.SaveTrackIDs.Visible = 'Off';
-handles.ResetImageSize.Visible = 'on';
 handles.PlotFluorData_SelectedCells.Visible = 'Off';
 handles.YlabelString.Visible = 'off';
 set(handles.YlabelString,'String','PlotFluor Ylabel');
@@ -534,8 +530,8 @@ handles.quantifyselected = [];
 % tdata.String = [];
 UpdateImage(handles,handles.currT);
 for jj=1:handles.counter%size(handles.tracktoplot,2)  
-hdata  = plot(handles.clickedcellX(jj),handles.clickedcellY(jj)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor(jj),:),'MarkerEdgeColor',colormap(handles.trackcolor(jj),:),'MarkerSize',5,'LineWidth',1);hold on
+% hdata  = plot(handles.clickedcellX(jj),handles.clickedcellY(jj)...
+%     ,'.','MarkerFaceColor',colormap(handles.trackcolor(jj),:),'MarkerEdgeColor',colormap(handles.trackcolor(jj),:),'MarkerSize',1,'LineWidth',1);hold on
 
 tdata = text(handles.clickedcellX(jj)+5,handles.clickedcellY(jj)+5,...
     num2str(handles.clickedcellID(jj)),'FontSize',12,'Color',colormap(handles.trackcolor(jj),:));
@@ -553,10 +549,8 @@ end
 
 if ~isempty(handles.matfile) && (handles.show_qFluorData == 1)
     handles.PlotFluorData_SelectedCells.Visible = 'On';
-     if isempty(handles.displayedFluorData)
     handles.YlabelString.Visible = 'on';
-    set(handles.YlabelString,'String','PlotFluor Y label');
-    end
+    set(handles.YlabelString,'String','PlotFluor Ylabel');
 end
 disp(['Cell tracks to watch simultaneously: ' num2str(handles.counter) ]);
 %handles.validtrack = handles.clickedcellID;
@@ -654,30 +648,17 @@ end
 %TODO: add the different symbols, since sometimes the tracks have the same
 %color
 legendstr = cell(size(handles.quantifyselected,2),1);
-symbolstring = {'x','p','d','o','s','*','x','p','d','o','s','*'};%
-if size(symbolstring,2)<size(handles.quantifyselected,2)
-    disp('Plotting all data using the same marker')
-    for x=1:size(handles.quantifyselected,2)
-        
-        fluorallt(x).intensity= cat(1,handles.quantifyselected(x).selected.dat.fluor);
-        fluorallt(x).coord = round(cat(1,handles.quantifyselected(x).selected.dat.xy));
-        figure(1),plot(fluorallt(x).intensity,'Color',...
-            colormap(handles.trackcolor(x),:),'LineWidth',1);hold on; box on
-        limitsX(x) = size(fluorallt(x).intensity,1);
-        limitsY(x) = max(fluorallt(x).intensity);
-        legendstr{x} = num2str(handles.tracktoplot(x));
-    end
-else
+symbolstring = {'-','p','d','o','s','*'};
+if size(sym)
 for x=1:size(handles.quantifyselected,2)
     
  fluorallt(x).intensity= cat(1,handles.quantifyselected(x).selected.dat.fluor);
  fluorallt(x).coord = round(cat(1,handles.quantifyselected(x).selected.dat.xy));
  figure(1),plot(fluorallt(x).intensity,'Color',...
-     colormap(handles.trackcolor(x),:),'Marker',symbolstring{x},'LineWidth',1);hold on; box on 
+     colormap(handles.trackcolor(x),:),'Marker',symbolstring{x},'LineWidth',3);hold on; box on 
  limitsX(x) = size(fluorallt(x).intensity,1);
  limitsY(x) = max(fluorallt(x).intensity);
  legendstr{x} = num2str(handles.tracktoplot(x));
-end
 end
 f = figure(1);
 ylim([0 max(limitsY)]);
@@ -686,7 +667,9 @@ f.CurrentAxes.XTick = 1:9:max(limitsX);
 f.CurrentAxes.XTickLabel = (1:9:max(limitsX))*handles.delta_t/60;
 f.CurrentAxes.FontSize = 12;
 f.CurrentAxes.LineWidth = 2;
-xlabel('Time, hrs');    
+xlabel('Time, hrs');
+
+    
 ylabel(handles.displayedFluorData);
 title('Selected cells only, Legend: trackIDs');
 legend(legendstr,'Location','NorthWest');
@@ -750,10 +733,8 @@ end
 
 if ~isempty(handles.matfile) && (handles.show_qFluorData == 1)
  handles.PlotFluorData_SelectedCells.Visible = 'On';
- if isempty(handles.displayedFluorData)
-    handles.YlabelString.Visible = 'on';
-    set(handles.YlabelString,'String','PlotFluor Y label');
-    end
+ handles.YlabelString.Visible = 'on';
+     set(handles.YlabelString,'String','PlotFluor Ylabel');
 
 [fluor_dat]=getfluordata(handles,inputID);
 fluor_selectedtracks(handles.counter).dat=fluor_dat;
@@ -802,14 +783,3 @@ function YlabelString_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
-
-% --- Executes on button press in ResetImageSize.
-function ResetImageSize_Callback(hObject, eventdata, handles)
-% hObject    handle to ResetImageSize (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-handles.axes1.XLim = [0.5000 1.0245e+03];
-handles.axes1.YLim =  [0.5000 1.0245e+03];
-guidata(hObject, handles);
