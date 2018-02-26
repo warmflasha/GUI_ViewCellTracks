@@ -22,7 +22,7 @@ function varargout = ViewCellTracks(varargin)
 
 % Edit the above text to modify the response to help ViewCellTracks
 
-% Last Modified by GUIDE v2.5 13-Feb-2018 13:59:44
+% Last Modified by GUIDE v2.5 21-Feb-2018 14:30:23
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -83,11 +83,27 @@ function slider1_Callback(hObject, eventdata, handles)
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
 xyt = handles.tracks;    
-handles.currT = int32(get(handles.slider1, 'Value'));
-set(handles.ShowTrackIDs,'String','ShowTrackIDs');
+handles.currT = int32(get(handles.slider1, 'Value'));%
+showfulltrackbutton = get(handles.ShowFullTrack,'String');
+if showfulltrackbutton(1) == 'H' % if the button was not depressed before clicking the slider
+handles.ShowFullTrack_State = handles.ShowFullTrack_State+1;
+set(handles.ShowFullTrack,'String','ShowFullTrack');
+end
+
+showtrackIDsbutton = get(handles.ShowTrackIDs,'String');
+if showtrackIDsbutton(1) == 'H' % if the button was not depressed before clicking the slider
+handles.ShowTrackIDsState = handles.ShowTrackIDsState+1;
+set(handles.ShowTrackIDs,'String','ShowFullTrack');
+end
+if isempty(handles.tracktoplot)
+hold on;UpdateImage(handles,handles.currT);
+title(['Current time point  ' num2str((double(handles.currT)*handles.delta_t)/60)  ...
+    'hrs since start; Frame(' num2str(handles.currT) ')']);hold on
+end
+
+if ~isempty(handles.tracktoplot)
 toview = size(handles.tracktoplot,2);
 hold on;UpdateImage(handles,handles.currT);
-if ~isempty(handles.tracktoplot)
 xyt_curr = struct;sz_tmp = [];
 for jj=1:toview
    xyt_curr(jj).fulltrack = xyt(handles.tracktoplot(jj)).dat;
@@ -101,59 +117,43 @@ for k =1:toview
     if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
         if xyt_curr(k).fulltrack(handles.currT,1)>0 % tracks that were assigned after first time point, have zeros in the beginning so don't plot them
             plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2),'p',...
-                'MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:));hold on  
+                'MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'Markersize',5);hold on  
             text(handles.axes1,xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
-                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',8);hold on
+                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on
         else
             disp(['Track ID ' num2str(handles.tracktoplot(k)) 'was picked up in frame' num2str(firstT(k))]);
         end
 
 end
 end
-title(['Current time point  ' num2str((handles.currT*handles.delta_t)/60)  ...
+title(['Current time point  ' num2str((double(handles.currT)*handles.delta_t)/60)  ...
     'hrs since start; Frame(' num2str(handles.currT) ')']);hold on
 end
-handles.ValidTrackIDtoSaveStatText.Visible = 'On';
-set(handles.ValidTrackIDtoSaveStatText,'String','TrackIDtoSave');
-handles.ReadValidTrackID.Visible = 'On';
-set(handles.ReadValidTrackID,'String','');
-
 % do if the checkbox was selected and the matfile is loaded;
 if ~isempty(handles.matfile) && (handles.show_qFluorData==1)
+    handles.PlotFluorData_SelectedCells.Visible = 'On';
+    if isempty(handles.displayedFluorData)
+    handles.YlabelString.Visible = 'on';
+    set(handles.YlabelString,'String','PlotFluor Y label');
+    end
     plotfluor = zeros(size(handles.quantifyselected,2),3);
     colormap2 = hot;% for the florIntensitydata
     for k=1:size(handles.quantifyselected,2)
         if size(handles.quantifyselected(k).selected.dat,2)>=handles.currT % if the track exists at the slider position
         plotfluor(k,1:2) = round(handles.quantifyselected(k).selected.dat(handles.currT).xy);
         plotfluor(k,3) = handles.quantifyselected(k).selected.dat(handles.currT).fluor;
-        custcolor = plotfluor(:,3);% make th fluor data a shade of red [ fluor 0 0]
-        custcolor(isnan(custcolor)) = 0;
-        custcolor(custcolor>1)=1;% if greater than 1, set to 1 (so red or blue or green)
-        custcolor(custcolor==0)=0.1;% if there's a zero fluor datapoint (no bio sence)
-        custommap = [custcolor zeros(size(custcolor)) ones(size(custcolor))];
-        hs=scatter(plotfluor(:,1),plotfluor(:,2),[],custommap,'o','filled');hold on      
-%        [cmin cmax]=caxis;
-%        caxis([0.1 1]) % typical limits for the nuc:cyto smad4 ratio
-       %colorbar
-        end
-        fluorallt= cat(1,handles.quantifyselected(k).selected.dat.fluor);
-        xyallt = round(cat(1,handles.quantifyselected(k).selected.dat.xy));
-        custommap = cool;
-    end      
-    %handles.axes1.Colorbar.Visible = 'off';
-    
-    %colorbar
+        text(handles.axes1,plotfluor(k,1)+10,plotfluor(k,2)-25,num2str(plotfluor(k,3),2),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on  
+        end              
+    end    
 end
 
 guidata(hObject, handles);
-
 
 % --- Executes during object creation, after setting all properties.
 function slider1_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to slider1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
-
 % Hint: slider controls usually have a light gray background.
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
@@ -204,7 +204,6 @@ function loadtrackingdata_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.DisplayTotalTracksField,'String','N');
-handles.validtrackIDcount = 1;% initialize the validTrack counter
 [tracks.Ilastikfile_TrackingData_h5, pathname] =uigetfile('*.h5','File Selector');%uigetfile('All Files (*.*)','File Selector');%{ {'uigetfile(''.'')'} }
 handles.ShowTrackIDsState = 1; % initialize the state of the counter of how many times the button was pressed
 handles.ShowFullTrack_State = 1;
@@ -212,12 +211,14 @@ tracks = StructDlg(tracks);
 handles.ilastikfile = fullfile(pathname,tracks.Ilastikfile_TrackingData_h5);
 [coordintime] = extracktIlastikTracks(handles);
 handles.tracks = coordintime;
+handles.colormap = prism; % default map
 % these default values are only used if user clickes slider without
 % selecting the trackid 
 handles.tracktoplot = [];% default track; gets reset onece the actual track is selected
 handles.matfile = [];% if no matfile,only want to see tracking data
-handles.colormap = jet;% default track; gets reset onece the actual track is selected
-handles.trackcolor = 1;% default track; gets reset onece the actual track is selected
+handles.InputTrackID_toLocateOnImage.Visible = 'on';
+handles.ResetImageSize.Visible = 'on';
+set(handles.InputTrackID_toLocateOnImage,'String','LocateTrackID');
 handles.total_tracks = size(coordintime,2);
 handles.DisplayTotalTracksField.Visible = 'On';
 handles.loadMatfile.Visible = 'On';
@@ -230,6 +231,7 @@ handles.ClearButton.Visible = 'On';
 handles.counter= 0; % to increment the number of chosen cells to track
 % show the first frame of the movie
 UpdateImage(handles,1);hold on
+disp('DONE');
 guidata(hObject, handles);
 
 function [multi_img,nt] = loadProjections(handles)
@@ -281,37 +283,39 @@ function ClearButton_Callback(hObject, eventdata, handles)
 % hObject    handle to ClearButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-%handles.PlotTrackID.Visible = 'Off';
 handles.counter = 0;
 handles.quantifyselected = [];
-handles.validtrackIDcount = 1;
+handles.displayedFluorData = [];
+handles.fulltrack = [];
+handles.plotfluorinput = [];
 handles.ShowTrackIDsState = 1;
 handles.ShowFullTrack_State = 1;
 handles.show_qFluorData = 0;
 handles.validtrack = [];
 handles.tracktoplot = [];
 handles.trackcolor = [];
+handles.clickedcellID=[];
+handles.clickedcellX=[];
+handles.clickedcellY=[];
 set(handles.qFluorescenceCheckBox,'Value',0);
 handles.show_qFluorData_State = 1;
 handles.SaveTrackIDs.Visible = 'Off';
-% handles.loadMatfile.Visible = 'Off';
+handles.ResetImageSize.Visible = 'on';
+handles.PlotFluorData_SelectedCells.Visible = 'Off';
+handles.YlabelString.Visible = 'off';
+set(handles.YlabelString,'String','PlotFluor Ylabel');
+handles.InputTrackID_toLocateOnImage.Visible = 'on';
+set(handles.InputTrackID_toLocateOnImage,'String','LocateTrackID');
 handles.ShowTrackIDs.Visible = 'On';
 set(handles.ShowTrackIDs,'String','ShowTrackIDs');
 handles.ShowFullTrack.Visible = 'Off';
-handles.ValidTrackIDtoSaveStatText.Visible = 'Off';
-handles.ReadValidTrackID.Visible = 'Off';
 axes(handles.axes1);hold off
 cla reset;
 handles.axes1.YTickLabel=[];
 handles.axes1.XTickLabel=[];
-% axes(handles.axes2);hold off
-% cla reset;
-% handles.axes2.YTickLabel=[];
-% handles.axes2.XTickLabel=[];
 box on
 delete(handles.axes1.Children)
 set(handles.slider1, 'Value', 1); 
-%set(handles.ReadTrackID,'String','Track ID');
 UpdateImage(handles,1);% show first frame when clear button is pressed
 title(['Current time point  ' num2str(1*handles.delta_t/60)   'hrs since start; Frame(' num2str(1) ')']);hold on
 guidata(hObject, handles);
@@ -352,8 +356,8 @@ for k=1:toview
  firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
 if  firstT(k)<=handles.currT % if this track has an XY at this time point
 hplot2 = plot(xyt_curr(k).fulltrack(firstT(k),1),xyt_curr(k).fulltrack(firstT(k),2)...
-    ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'MarkerSize',5,'LineWidth',1);hold on
-text(xyt_curr(k).fulltrack(firstT(k),1)+5,xyt_curr(k).fulltrack(firstT(k),2)+5,num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',8);hold on
+    ,'p','MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'MarkerSize',8,'LineWidth',1);hold on
+text(xyt_curr(k).fulltrack(firstT(k),1)+5,xyt_curr(k).fulltrack(firstT(k),2)+5,num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on
 end
 end
 %title(['Frame ' num2str(handles.currT) ]);
@@ -370,8 +374,7 @@ handles.currT = int32(get(handles.slider1, 'Value'));
 UpdateImage(handles,1);hold on
 colormap = handles.colormap;
 for k=1:toview
- firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
- 
+ firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3))); 
 if  ~isempty(handles.currT)% 
 hplot2 = plot(xyt_curr(k).fulltrack(firstT(k)+1:end-1,1),xyt_curr(k).fulltrack(firstT(k)+1:end-1,2)...
     ,'*','Color',colormap(handles.trackcolor(k),:),'MarkerSize',3,'LineWidth',1);hold on
@@ -390,41 +393,6 @@ end
 guidata(hObject, handles);
 
 
-function ReadValidTrackID_Callback(hObject, eventdata, handles)
-% hObject    handle to ReadValidTrackID (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of ReadValidTrackID as text
-%        str2double(get(hObject,'String')) returns contents of ReadValidTrackID as a double
-handles.SaveTrackIDs.Visible = 'On';
-tmp = get(handles.ReadValidTrackID,'String');
-validtrack = str2double(tmp);
-handles.validtrack(handles.validtrackIDcount)=validtrack;
-handles.validtrackIDcount = handles.validtrackIDcount+1;
-set(handles.ReadValidTrackID,'String','');% set the input field back to empty
-%display the saved goodtracks
-guidata(hObject, handles);
-
-% --- Executes during object creation, after setting all properties.
-function ReadValidTrackID_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to ReadValidTrackID (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes during object creation, after setting all properties.
-function ValidTrackIDtoSaveStatText_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to ValidTrackIDtoSaveStatText (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
 % --- Executes on button press in SaveTrackIDs.
 function SaveTrackIDs_Callback(hObject, eventdata, handles)
 % hObject    handle to SaveTrackIDs (see GCBO)
@@ -437,25 +405,18 @@ if platf == 1
 else
     fname = [num2str(handles.dir) '/SelectedTrackIDsData_f' num2str(handles.pos-1) '_chan_w000' num2str(handles.chan-1) '.mat' ];
 end
-
+% only the clicked cells are quntified and only
+% they will be saved (no manual input of trackIDs to save)
 if ~isempty(handles.matfile) && (handles.show_qFluorData==1)
-    q = 1;
     fluor_selectedtracks = struct;
     for jj=1:size(handles.quantifyselected,2)
-        tmp(jj) = handles.quantifyselected(jj).selected.dat(1).track;
-        tmp2 = find(tmp(jj) == goodtracks);
-        if ~isempty(tmp2)
-            fluor_selectedtracks(q).dat = handles.quantifyselected(jj).selected.dat;
-            q = q+1;
-        end
+    fluor_selectedtracks(jj).dat = handles.quantifyselected(jj).selected.dat;
     end
     save(fname,'goodtracks','fluor_selectedtracks');disp('Saved selected trackIDs and their fluorescence quantification to file');
-    
 else
     save(fname,'goodtracks');
     disp('Saved selected trackIDs to file');
 end
-handles.validtrackIDcount = 1;% reset the validTrack counter
 guidata(hObject, handles);
 
 % --- Executes on button press in ShowTrackIDs.
@@ -470,7 +431,6 @@ handles.currT = int32(get(handles.slider1, 'Value'));
 %disp(handles.ShowTrackIDsState);
 if mod(handles.ShowTrackIDsState,2) >0 % if odd
 set(handles.ShowTrackIDs,'String','ShowTrackIDs');
-% code to remove plotted trackIDs from the image
 UpdateImage(handles,handles.currT);hold on
 end
 if mod(handles.ShowTrackIDsState,2) == 0 % if even
@@ -503,6 +463,8 @@ handles.ShowFullTrack.Visible = 'On';
 function IDclickedcell(src,evnt,handles)
 handles = guidata(src);
 handles.ShowFullTrack.Visible = 'On';
+set(handles.ShowFullTrack,'String','ShowFullTrack');
+set(handles.ShowTrackIDs,'String','ShowTrackIDs');
 handles.counter = handles.counter+1;% any tme a new track is input, the counter is incremented    
 clickedXY = get(handles.axes1, 'CurrentPoint');
 xy = [clickedXY(1,1) clickedXY(1,2)];
@@ -518,34 +480,88 @@ for jj=1:size(xyt,2)
         allIDdata(jj,3)=jj;    % trackID label
     end
 end
+
 closestcell= ipdm(xy,allIDdata(:,1:2), 'Subset', 'NearestNeighbor', 'Result', 'Structure');
-hdata  = plot(allIDdata(closestcell.columnindex,1),allIDdata(closestcell.columnindex,2)...
-    ,'*b','MarkerSize',3,'LineWidth',1);hold on
-text(allIDdata(closestcell.columnindex,1)+5,allIDdata(closestcell.columnindex,2)+5,...
-    num2str(allIDdata(closestcell.columnindex,3)),'FontSize',8,'Color','r');
 % here put the readtrackID code and get rid of the button, such that
 % theclick populates the totrack 
-
 readinput= allIDdata(closestcell.columnindex,3);% trackID as read from the click
 handles.tracktoplot(handles.counter) = readinput;
 handles.colormap = prism;      
 handles.PlotTrackID.Visible = 'On';
 handles.ShowFullTrack.Visible = 'On';
-%handles.fulltrack = handles.tracks(handles.tracktoplot).dat;
-colormap = prism;
-randcolor = randi(size(colormap,1));% select the track label color once
+colormap = handles.colormap;
+randcolor = randi(size(colormap,1));%randi(size(colormap,1))     select the track label color once
 handles.trackcolor(handles.counter) = randcolor;
-disp(['Cell tracks to watch simultaneously: ' num2str(handles.counter) ]);
+handles.clickedcellID(handles.counter) = allIDdata(closestcell.columnindex,3);
+handles.clickedcellX(handles.counter)=allIDdata(closestcell.columnindex,1);
+handles.clickedcellY(handles.counter)=allIDdata(closestcell.columnindex,2);
+% if the fist cell is uncklicked
+if handles.counter ==2 && (handles.tracktoplot(handles.counter) == handles.tracktoplot(handles.counter-1))
+  handles.counter = 0;
+  handles.tracktoplot = [];
+  handles.trackcolor = [];  
+  handles.clickedcellID = [];
+  handles.clickedcellY = [];
+  handles.clickedcellX = [];
+  UpdateImage(handles,handles.currT); 
+ 
+end
+% here if the same cell was clicekd again (consecutively), make the cell label dissapear; 
+if (handles.counter > 2) && (handles.tracktoplot(handles.counter) == handles.tracktoplot(handles.counter-1))
+  handles.counter = handles.counter-2;
+  handles.tracktoplot = (handles.tracktoplot(1:end-2));  
+      handles.trackcolor=handles.trackcolor(1:handles.counter);  
+  handles.clickedcellID = handles.clickedcellID(1:(handles.counter));
+  handles.clickedcellX = handles.clickedcellX(1:(handles.counter));
+  handles.clickedcellY=  handles.clickedcellY(1:(handles.counter));    
+  UpdateImage(handles,handles.currT); 
+  
+end
+% if the cell was unclicked later on,after selecting some more cells
+if (handles.counter > 2) && any(handles.tracktoplot(handles.counter) == (handles.tracktoplot(1:handles.counter-1)))
+  [~,c]=find(handles.tracktoplot(handles.counter) ~= handles.tracktoplot);% any trackIDs that don't match the clicked one
+   handles.counter = handles.counter-2;
+  handles.tracktoplot = handles.tracktoplot(c);  
+   handles.trackcolor= handles.trackcolor(c);  
+  handles.clickedcellID = handles.clickedcellID(c);
+  handles.clickedcellX = handles.clickedcellX(c);
+  handles.clickedcellY=  handles.clickedcellY(c);    
+  UpdateImage(handles,handles.currT);
+  
+end
+fluor_selectedtracks = struct;
+handles.quantifyselected = [];
+% tdata.String = [];
+UpdateImage(handles,handles.currT);
+for jj=1:handles.counter%size(handles.tracktoplot,2)  
+hdata  = plot(handles.clickedcellX(jj),handles.clickedcellY(jj)...
+    ,'p','MarkerFaceColor',colormap(handles.trackcolor(jj),:),'MarkerEdgeColor',colormap(handles.trackcolor(jj),:),'MarkerSize',5,'LineWidth',1);hold on
 
-if ~isempty(handles.matfile) %&& (handles.show_qFluorData == 1)
+tdata = text(handles.clickedcellX(jj)+5,handles.clickedcellY(jj)+5,...
+    num2str(handles.clickedcellID(jj)),'FontSize',12,'Color',colormap(handles.trackcolor(jj),:));
+
+if ~isempty(handles.matfile) && (handles.show_qFluorData == 1)
 % the function below will get the fluoresence quantification data for each
 % clicked cell for all time points availabe in the .mat file
-[fluor_dat]=getfluordata(handles,readinput);
+[fluor_dat]=getfluordata(handles,handles.tracktoplot(jj));%
 % need then to store it in handles and use it at slider motion id the .mat
 % file is loaded
-fluor_selectedtracks(handles.counter).dat=fluor_dat;
-handles.quantifyselected(handles.counter).selected= fluor_selectedtracks(handles.counter);
+fluor_selectedtracks(jj).dat=fluor_dat;
+handles.quantifyselected(jj).selected= fluor_selectedtracks(jj);
 end
+end
+
+if ~isempty(handles.matfile) && (handles.show_qFluorData == 1)
+    handles.PlotFluorData_SelectedCells.Visible = 'On';
+     if isempty(handles.displayedFluorData)
+    handles.YlabelString.Visible = 'on';
+    set(handles.YlabelString,'String','PlotFluor Y label');
+    end
+end
+disp(['Cell tracks to watch simultaneously: ' num2str(handles.counter) ]);
+%handles.validtrack = handles.clickedcellID;
+handles.validtrack = handles.tracktoplot;
+handles.SaveTrackIDs.Visible = 'On';
 guidata(src, handles);
 
 % --- Executes on button press in loadMatfile.
@@ -558,8 +574,6 @@ function loadMatfile_Callback(hObject, eventdata, handles)
 % each time point quntified or only the last time point
 handles.show_qFluorData = 0;
 handles.show_qFluorData_State =1;
-% handles.axes2.Visible='on';
-set(handles.qFluorescenceCheckBox,'Value',0);
 [tracks.fluorquantified, pathname_mat] =uigetfile('*.mat','File Selector');% 
 tracks = StructDlg(tracks);
 handles.matfile = fullfile(pathname_mat,tracks.fluorquantified);% the output .mat file of the Idse's analysis code, with the 'positions' containing all the data
@@ -619,14 +633,183 @@ if mod(handles.show_qFluorData_State,2)>0
     handles.show_qFluorData  = 0;
 end
 %disp(handles.show_qFluorData);  
+    handles.displayedFluorData = [];
+guidata(hObject, handles);
+
+% --- Executes on button press in PlotFluorData_SelectedCells.
+function PlotFluorData_SelectedCells_Callback(hObject, eventdata, handles)
+% hObject    handle to PlotFluorData_SelectedCells (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+if isempty(handles.displayedFluorData)
+    disp('Input the ylabel for the fluorescence data plot')
+    return
+else
+colormap = handles.colormap;
+if isempty(handles.quantifyselected)
+    disp('Select cells after clicking the checkbox')
+    return
+end
+%TODO: add the different symbols, since sometimes the tracks have the same
+%color
+legendstr = cell(size(handles.quantifyselected,2),1);
+symbolstring = {'x','p','d','o','s','*','x','p','d','o','s','*'};%
+if size(symbolstring,2)<size(handles.quantifyselected,2)
+    disp('Plotting all data using the same marker')
+    for x=1:size(handles.quantifyselected,2)
+        
+        fluorallt(x).intensity= cat(1,handles.quantifyselected(x).selected.dat.fluor);
+        fluorallt(x).coord = round(cat(1,handles.quantifyselected(x).selected.dat.xy));
+        figure(1),plot(fluorallt(x).intensity,'Color',...
+            colormap(handles.trackcolor(x),:),'LineWidth',1);hold on; box on
+        limitsX(x) = size(fluorallt(x).intensity,1);
+        limitsY(x) = max(fluorallt(x).intensity);
+        legendstr{x} = num2str(handles.tracktoplot(x));
+    end
+else
+for x=1:size(handles.quantifyselected,2)
     
+ fluorallt(x).intensity= cat(1,handles.quantifyselected(x).selected.dat.fluor);
+ fluorallt(x).coord = round(cat(1,handles.quantifyselected(x).selected.dat.xy));
+ figure(1),plot(fluorallt(x).intensity,'Color',...
+     colormap(handles.trackcolor(x),:),'Marker',symbolstring{x},'LineWidth',1);hold on; box on 
+ limitsX(x) = size(fluorallt(x).intensity,1);
+ limitsY(x) = max(fluorallt(x).intensity);
+ legendstr{x} = num2str(handles.tracktoplot(x));
+end
+end
+f = figure(1);
+ylim([0 max(limitsY)]);
+xlim([0 max(limitsX)]);
+f.CurrentAxes.XTick = 1:9:max(limitsX);
+f.CurrentAxes.XTickLabel = (1:9:max(limitsX))*handles.delta_t/60;
+f.CurrentAxes.FontSize = 12;
+f.CurrentAxes.LineWidth = 2;
+xlabel('Time, hrs');    
+ylabel(handles.displayedFluorData);
+title('Selected cells only, Legend: trackIDs');
+legend(legendstr,'Location','NorthWest');
+end
 guidata(hObject, handles);
 
 
-% Hint: get(hObject,'Value') returns toggle state of qFluorescenceCheckBox
-% TODO: intergrate with the signaling/fluorescence quantification
-% data
-% TODO: make sure the input file from laser scanning scope can be used( not
-% a problem, as long as the max projections are generted to be saved in the
-% Andor naming format
-% TODO: .csv table from ilastik as input must be also compatible
+function InputTrackID_toLocateOnImage_Callback(hObject, eventdata, handles)
+% hObject    handle to InputTrackID_toLocateOnImage (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of InputTrackID_toLocateOnImage as text
+%        str2double(get(hObject,'String')) returns contents of InputTrackID_toLocateOnImage as a double
+handles.ShowFullTrack.Visible = 'On';
+set(handles.ShowFullTrack,'String','ShowFullTrack');
+set(handles.ShowTrackIDs,'String','ShowTrackIDs');
+handles.SaveTrackIDs.Visible = 'On';
+handles.counter = handles.counter+1;% any tme a new track is input, the counter is incremented    
+inputID = str2double(get(handles.InputTrackID_toLocateOnImage, 'String'));
+handles.tracktoplot(handles.counter) = inputID;
+if (inputID > handles.total_tracks)
+    disp('This number exceeds total number of tracks');
+    set(handles.InputTrackID_toLocateOnImage,'String','');
+    return
+end
+% here need to put some way of unclicking the manually input cell (not really useful, but may happen)
+
+xyt = handles.tracks;    
+handles.currT = int32(get(handles.slider1, 'Value'));
+%set(handles.ShowTrackIDs,'String','ShowTrackIDs');
+toview = size(handles.tracktoplot,2);
+hold on;UpdateImage(handles,handles.currT);
+if ~isempty(handles.tracktoplot)
+xyt_curr = struct;sz_tmp = [];
+for jj=1:toview
+   xyt_curr(jj).fulltrack = xyt(handles.tracktoplot(jj)).dat;
+   sz_tmp(jj) = size(xyt(handles.tracktoplot(jj)).dat,1);   
+end
+handles.fulltrack = xyt_curr;
+colormap = handles.colormap;
+randcolor =randi(size(colormap,1)) ;%randi(size(colormap,1))  select the track label color once here
+handles.trackcolor(handles.counter) = randcolor;
+for k =1:toview
+ firstT(k)= min(nonzeros(xyt_curr(k).fulltrack(:,3)));
+    if  handles.currT<=size(xyt_curr(k).fulltrack,1)% not all cells are tracked all the way
+        if xyt_curr(k).fulltrack(handles.currT,1)>0 % tracks that were assigned after first time point, have zeros in the beginning so don't plot them
+            plot(xyt_curr(k).fulltrack(handles.currT,1),xyt_curr(k).fulltrack(handles.currT,2),'p',...
+                'MarkerFaceColor',colormap(handles.trackcolor(k),:),'MarkerEdgeColor',colormap(handles.trackcolor(k),:),'Markersize',2);hold on  
+            text(handles.axes1,xyt_curr(k).fulltrack(handles.currT,1)+5,xyt_curr(k).fulltrack(handles.currT,2)+5,...
+                num2str(handles.tracktoplot(k)),'Color',colormap(handles.trackcolor(k),:),'FontSize',12);hold on
+        else
+            disp(['Track ID ' num2str(handles.tracktoplot(k)) 'was picked up in frame' num2str(firstT(k))]);
+        end
+
+end
+end
+title(['Current time point  ' num2str((double(handles.currT)*handles.delta_t)/60)  ...
+    'hrs since start; Frame(' num2str(handles.currT) ')']);hold on
+end
+
+if ~isempty(handles.matfile) && (handles.show_qFluorData == 1)
+ handles.PlotFluorData_SelectedCells.Visible = 'On';
+ if isempty(handles.displayedFluorData)
+    handles.YlabelString.Visible = 'on';
+    set(handles.YlabelString,'String','PlotFluor Y label');
+    end
+
+[fluor_dat]=getfluordata(handles,inputID);
+fluor_selectedtracks(handles.counter).dat=fluor_dat;
+handles.quantifyselected(handles.counter).selected= fluor_selectedtracks(handles.counter);
+end
+set(handles.InputTrackID_toLocateOnImage,'String','');
+handles.validtrack = handles.tracktoplot;
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function InputTrackID_toLocateOnImage_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to InputTrackID_toLocateOnImage (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function YlabelString_Callback(hObject, eventdata, handles)
+% hObject    handle to YlabelString (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of YlabelString as text
+%        str2double(get(hObject,'String')) returns contents of YlabelString as a double
+displayedData = (get(handles.YlabelString, 'String'));
+
+handles.displayedFluorData = displayedData;
+handles.YlabelString.Visible = 'off';
+%set(handles.YlabelString,'String','');
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function YlabelString_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to YlabelString (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in ResetImageSize.
+function ResetImageSize_Callback(hObject, eventdata, handles)
+% hObject    handle to ResetImageSize (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+handles.axes1.XLim = [0.5000 1.0245e+03];
+handles.axes1.YLim =  [0.5000 1.0245e+03];
+guidata(hObject, handles);
